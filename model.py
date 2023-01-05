@@ -68,12 +68,14 @@ def prediction_from_gbr(reg, df, start):
     # print(df['day_of_week_Tue'].sum())
     # print(df['day_of_week_Wed'].sum())
     # print(df['day_of_week_Thu'].sum())
-    # assign day_of_week: one line for Mondays, one line for Tuesdays
+    # assign day_of_week: one line for Mondays, one line for Tuesdays, one line for Thursdays
     mondays  = np.transpose(np.array([t, np.ones(num) , np.zeros(num), np.zeros(num), np.zeros(num)]))
     tuesdays = np.transpose(np.array([t, np.zeros(num), np.ones(num) , np.zeros(num), np.zeros(num)]))
+    thursdays = np.transpose(np.array([t, np.zeros(num), np.zeros(num) , np.zeros(num), np.ones(num)]))
     mon_line = reg.predict(mondays)
     tue_line = reg.predict(tuesdays)
-    x = (mondays + tuesdays)/2
+    thu_line = reg.predict(thursdays)
+    x = (mondays + tuesdays + thursdays)/3
     x_t = x.T 
-    y = (mon_line + tue_line)/2
+    y = (mon_line + tue_line + thu_line)/3
     return x_t[0], y
