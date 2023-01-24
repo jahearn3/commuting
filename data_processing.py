@@ -1,5 +1,7 @@
+import numpy as np 
 import pandas as pd 
 import datetime
+from sklearn.model_selection import train_test_split
 
 def process_data(filename='commuting_data.csv'):
     '''Import the data from a csv file and perform initial processing tasks.
@@ -44,3 +46,40 @@ def process_data(filename='commuting_data.csv'):
     return df
 
 #df = process_data()
+
+def preprocess_data(start, end, df):
+    #print(df)
+    df = pd.get_dummies(data=df, columns=['day_of_week'], drop_first=True)
+    df_notna = df[df[start + '_departure_time_hr'].notna()]
+    X = df_notna[[start + '_departure_time_hr','day_of_week_Mon','day_of_week_Tue','day_of_week_Wed','day_of_week_Thu']]
+    #df = df.get_dummies(data=df, prefix=['Mon', 'Tue', 'Wed', 'Thu', 'Fri'], columns='day_of_week', drop_first=True)
+    #X = np.array(df[start + '_departure_time_hr'].dropna()).reshape(-1, 1)
+    #X = np.array(df_notna[start + '_departure_time_hr']).reshape(-1, 1)
+    #X = np.array([df_notna[start + '_departure_time_hr'], df_notna['day_of_week_Mon'], df_notna['day_of_week_Tue'], df_notna['day_of_week_Wed'], df_notna['day_of_week_Thu']])
+    #print(X.shape)
+    #X = np.array([df[start + '_departure_time_hr'], df['day_of_week_Mon'], df['day_of_week_Tue'], df['day_of_week_Wed'], df['day_of_week_Thu']])
+    #y = np.array(df['minutes_to_' + end].dropna())
+    y = np.array(df_notna['minutes_to_' + end])
+    #(len1, len2) = X.shape
+    #X = np.reshape(X, (len2, len1))
+    #print(y)
+    #X = df_notna.drop(['minutes_to_' + end], axis=1)
+    #print(X)
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.1, random_state=13)
+    params = {
+        "n_estimators": 500,
+        "max_depth": 6,
+        "min_samples_split": 4,
+        "learning_rate": 0.01,
+        "loss": "squared_error"#,
+    }
+    return X_train, X_test, y_train, y_test, params 
+
+    # hyperparameters -> minimum deviance
+    #  500, 4,  5, 0.01 -> 200 @ 500
+    # 1000, 4,  5, 0.01 -> 200 @ 1000
+    #  500, 8,  5, 0.01 -> 250 @ 500
+    #  500, 4, 10, 0.01 -> 280 @ 500
+    # 1000, 4, 10, 0.01 -> 200 @ 1000
+    #  500, 3,  4, 0.01 -> 200 @ 500 <- selected
+    #  500, 2,  3, 0.01 -> 270 @ 500

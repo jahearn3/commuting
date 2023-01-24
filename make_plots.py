@@ -4,8 +4,6 @@ import matplotlib.ticker as ticker
 import numpy as np 
 import pandas as pd 
 from statsmodels.formula.api import ols
-from sklearn.tree import DecisionTreeRegressor
-from sklearn.model_selection import train_test_split
 from sklearn.metrics import mean_squared_error as MSE
 from sklearn.inspection import permutation_importance 
 from sklearn import ensemble
@@ -14,6 +12,7 @@ import warnings
 warnings.simplefilter(action='ignore', category=FutureWarning)
 
 import model 
+import data_processing as dp 
 
 def plot_residuals(start, end, df):
     fig = plt.figure()
@@ -23,43 +22,6 @@ def plot_residuals(start, end, df):
     plt.ylabel("Residuals")
     plt.savefig('duration_vs_departure_residuals_from_' + start + '_to_' + end + '.png')
     plt.clf()
-
-def preprocess_data(start, end, df):
-    #print(df)
-    df = pd.get_dummies(data=df, columns=['day_of_week'], drop_first=True)
-    df_notna = df[df[start + '_departure_time_hr'].notna()]
-    X = df_notna[[start + '_departure_time_hr','day_of_week_Mon','day_of_week_Tue','day_of_week_Wed','day_of_week_Thu']]
-    #df = df.get_dummies(data=df, prefix=['Mon', 'Tue', 'Wed', 'Thu', 'Fri'], columns='day_of_week', drop_first=True)
-    #X = np.array(df[start + '_departure_time_hr'].dropna()).reshape(-1, 1)
-    #X = np.array(df_notna[start + '_departure_time_hr']).reshape(-1, 1)
-    #X = np.array([df_notna[start + '_departure_time_hr'], df_notna['day_of_week_Mon'], df_notna['day_of_week_Tue'], df_notna['day_of_week_Wed'], df_notna['day_of_week_Thu']])
-    #print(X.shape)
-    #X = np.array([df[start + '_departure_time_hr'], df['day_of_week_Mon'], df['day_of_week_Tue'], df['day_of_week_Wed'], df['day_of_week_Thu']])
-    #y = np.array(df['minutes_to_' + end].dropna())
-    y = np.array(df_notna['minutes_to_' + end])
-    #(len1, len2) = X.shape
-    #X = np.reshape(X, (len2, len1))
-    #print(y)
-    #X = df_notna.drop(['minutes_to_' + end], axis=1)
-    #print(X)
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.1, random_state=13)
-    params = {
-        "n_estimators": 500,
-        "max_depth": 6,
-        "min_samples_split": 4,
-        "learning_rate": 0.01,
-        "loss": "squared_error"#,
-    }
-    return X_train, X_test, y_train, y_test, params 
-
-    # hyperparameters -> minimum deviance
-    #  500, 4,  5, 0.01 -> 200 @ 500
-    # 1000, 4,  5, 0.01 -> 200 @ 1000
-    #  500, 8,  5, 0.01 -> 250 @ 500
-    #  500, 4, 10, 0.01 -> 280 @ 500
-    # 1000, 4, 10, 0.01 -> 200 @ 1000
-    #  500, 3,  4, 0.01 -> 200 @ 500 <- selected
-    #  500, 2,  3, 0.01 -> 270 @ 500
 
 def plot_gbr_training_deviance(start, end, params, reg, X_test, y_test):
     test_score = np.zeros((params["n_estimators"],), dtype=np.float64)
@@ -151,7 +113,7 @@ def duration_vs_departure(df, start='home', end='work', order=1, gbr=False):
 
     # Practice with gradient boosting regression
     if(gbr):
-        X_train, X_test, y_train, y_test, params = preprocess_data(start, end, df)
+        X_train, X_test, y_train, y_test, params = dp.preprocess_data(start, end, df)
         reg, mse = model.fit_gbr(X_train, X_test, y_train, y_test, params)
         x, y = model.prediction_from_gbr(reg, df, start)
         ax.plot(x, y, c='c')

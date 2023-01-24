@@ -2,10 +2,13 @@ import numpy as np
 import pandas as pd 
 from statsmodels.formula.api import ols
 from sklearn.tree import DecisionTreeRegressor
-from sklearn.model_selection import train_test_split
+from sklearn.model_selection import train_test_split, cross_val_score, GridSearchCV
+#from sklearn.model_selection import KFold 
 from sklearn.metrics import mean_squared_error as MSE
 from sklearn.inspection import permutation_importance 
-from sklearn import ensemble
+from sklearn.ensemble import GradientBoostingRegressor
+from sklearn.metrics import r2_score, make_scorer
+
 import warnings
 
 warnings.filterwarnings(action='ignore', category=UserWarning)
@@ -24,16 +27,24 @@ def nonlinear_prediction_line(df, start, end):
     # print(coeffs)
     return x, coeffs[0] * x + coeffs[1] * x + coeffs[2]
 
+
+
 def decision_tree_regressor(df, start, end):
     seed = 3
+    X = df[start + '_departure_time_hr'].dropna()
+    y = df['minutes_to_' + end].dropna() 
     #X_train = df[start + '_departure_time_hr'].dropna()
     #y_train = df['minutes_to_' + end].dropna()
     #X_test = np.linspace(X_train.min(), X_train.max(), 100)
-    X_train, X_test, y_train, y_test = train_test_split(df[start + '_departure_time_hr'].dropna(), df['minutes_to_' + end].dropna(), test_size=0.3, random_state=seed)
+    #TODO: k-fold cross validation 
+    #kf = KFold(n_splits=4, random_state=seed)
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=seed)
     dt = DecisionTreeRegressor(max_depth=8, random_state=seed)
     #X_train.reshape(-1, 1)
     #y_train.reshape(-1, 1)
     dt.fit(X_train, y_train)
+    # dt_scores = cross_val_score(dt_fit, X_train, y_train, cv = 5)
+
     y_pred = dt.predict(X_test)
     mse_dt = MSE(y_test, y_pred)
     rmse_dt = mse_dt**(1/2)
@@ -51,10 +62,34 @@ def compare(df, start, end):
     print('correlation: ' + str(df[start + '_departure_time_hr'].corr(df['minutes_to_' + end])))
 
 def fit_gbr(X_train, X_test, y_train, y_test, params):
-    reg = ensemble.GradientBoostingRegressor(**params)
-    reg.fit(X_train, y_train)
+    reg = GradientBoostingRegressor(**params)
+    reg_fit = reg.fit(X_train, y_train)
     mse = MSE(y_test, reg.predict(X_test))
     print("The mean squared error (MSE) on test set: {:.4f}".format(mse))
+
+    # reg_scores = cross_val_score(reg_fit, X_train, y_train, cv = 5)
+    # print("mean cross validation score: {}".format(np.mean(reg_scores)))
+    # print("score without cv: {}".format(reg_fit.score(X_train, y_train)))   
+
+    # # on the test or hold-out set
+    # print(r2_score(y_test, reg_fit.predict(X_test)))
+    # print(reg_fit.score(X_test, y_test)) 
+
+    # scoring = make_scorer(r2_score)
+    # g_cv = GridSearchCV(GradientBoostingRegressor(random_state=0),
+    #             param_grid={'min_samples_split': range(2, 10)},
+    #             scoring=scoring, cv=5, refit=True)
+
+    # g_cv.fit(X_train, y_train)
+    # g_cv.best_params_
+
+    # result = g_cv.cv_results_
+    # # print(result)
+    # result = r2_score(y_test, g_cv.best_estimator_.predict(X_test))
+    # print(result)
+
+    # mse = MSE(y_test, reg.predict(X_test))
+    # print("The mean squared error (MSE) on test set: {:.4f}".format(mse))
     return reg, mse 
 
 def prediction_from_gbr(reg, df, start):
