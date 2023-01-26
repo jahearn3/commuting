@@ -66,20 +66,5 @@ def preprocess_data(start, end, df):
     #X = df_notna.drop(['minutes_to_' + end], axis=1)
     #print(X)
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.1, random_state=13)
-    params = {
-        "n_estimators": 500,
-        "max_depth": 6,
-        "min_samples_split": 4,
-        "learning_rate": 0.01,
-        "loss": "squared_error"#,
-    }
-    return X_train, X_test, y_train, y_test, params 
+    return X_train, X_test, y_train, y_test 
 
-    # hyperparameters -> minimum deviance
-    #  500, 4,  5, 0.01 -> 200 @ 500
-    # 1000, 4,  5, 0.01 -> 200 @ 1000
-    #  500, 8,  5, 0.01 -> 250 @ 500
-    #  500, 4, 10, 0.01 -> 280 @ 500
-    # 1000, 4, 10, 0.01 -> 200 @ 1000
-    #  500, 3,  4, 0.01 -> 200 @ 500 <- selected
-    #  500, 2,  3, 0.01 -> 270 @ 500

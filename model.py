@@ -27,30 +27,6 @@ def nonlinear_prediction_line(df, start, end):
     # print(coeffs)
     return x, coeffs[0] * x + coeffs[1] * x + coeffs[2]
 
-
-
-def decision_tree_regressor(df, start, end):
-    seed = 3
-    X = df[start + '_departure_time_hr'].dropna()
-    y = df['minutes_to_' + end].dropna() 
-    #X_train = df[start + '_departure_time_hr'].dropna()
-    #y_train = df['minutes_to_' + end].dropna()
-    #X_test = np.linspace(X_train.min(), X_train.max(), 100)
-    #TODO: k-fold cross validation 
-    #kf = KFold(n_splits=4, random_state=seed)
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=seed)
-    dt = DecisionTreeRegressor(max_depth=8, random_state=seed)
-    #X_train.reshape(-1, 1)
-    #y_train.reshape(-1, 1)
-    dt.fit(X_train, y_train)
-    # dt_scores = cross_val_score(dt_fit, X_train, y_train, cv = 5)
-
-    y_pred = dt.predict(X_test)
-    mse_dt = MSE(y_test, y_pred)
-    rmse_dt = mse_dt**(1/2)
-    print('Root mean square: ' + str(rmse_dt))
-    return X_test, y_pred
-
 def linear_prediction_from_statsmodels(df, start, end, num=20):
     mdl_duration_vs_departure = ols('minutes_to_' + end + ' ~ ' + start + '_departure_time_hr', data=df).fit() # Create the model object and fit the model
     #print(mdl_duration_vs_departure.params) # Print the parameters of the fitted model
@@ -61,11 +37,35 @@ def linear_prediction_from_statsmodels(df, start, end, num=20):
 def compare(df, start, end):
     print('correlation: ' + str(df[start + '_departure_time_hr'].corr(df['minutes_to_' + end])))
 
-def fit_gbr(X_train, X_test, y_train, y_test, params):
+def fit_dtr(X_train, X_test, y_train, y_test):
+    seed = 3
+    dt = DecisionTreeRegressor(max_depth=8, random_state=seed)
+    dt.fit(X_train, y_train)
+    mse = MSE(y_test, dt.predict(X_test))
+    print(f'DTR mean squared error (MSE) on test set: {mse}')
+    return dt, mse
+
+def fit_gbr(X_train, X_test, y_train, y_test):
+    params = {
+        "n_estimators": 500,
+        "max_depth": 6,
+        "min_samples_split": 4,
+        "learning_rate": 0.01,
+        "loss": "squared_error"#,
+    }
+    # hyperparameters -> minimum deviance
+    #  500, 4,  5, 0.01 -> 200 @ 500
+    # 1000, 4,  5, 0.01 -> 200 @ 1000
+    #  500, 8,  5, 0.01 -> 250 @ 500
+    #  500, 4, 10, 0.01 -> 280 @ 500
+    # 1000, 4, 10, 0.01 -> 200 @ 1000
+    #  500, 3,  4, 0.01 -> 200 @ 500 <- selected
+    #  500, 2,  3, 0.01 -> 270 @ 500
+
     reg = GradientBoostingRegressor(**params)
     reg_fit = reg.fit(X_train, y_train)
     mse = MSE(y_test, reg.predict(X_test))
-    print("The mean squared error (MSE) on test set: {:.4f}".format(mse))
+    print(f'GBR mean squared error (MSE) on test set: {mse}')
 
     # reg_scores = cross_val_score(reg_fit, X_train, y_train, cv = 5)
     # print("mean cross validation score: {}".format(np.mean(reg_scores)))
@@ -90,9 +90,10 @@ def fit_gbr(X_train, X_test, y_train, y_test, params):
 
     # mse = MSE(y_test, reg.predict(X_test))
     # print("The mean squared error (MSE) on test set: {:.4f}".format(mse))
-    return reg, mse 
+    return reg, mse, params 
 
-def prediction_from_gbr(reg, df, start):
+def prediction(reg, df, start):
+# def prediction_from_gbr(reg, df, start):
     num = int(np.sqrt(df[start + '_departure_time_hr'].notnull().sum())) + 1
     #print('Earliest departure: ' + str(df[start + '_departure_time_hr'].min()))
     #print('Latest departure: ' + str(df[start + '_departure_time_hr'].max()))

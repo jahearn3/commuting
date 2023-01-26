@@ -82,7 +82,7 @@ def time_xticks(ax, earliest_departure, latest_departure):
     #ax.set_xlim(np.fmin(earliest_departure, ticks_loc[0]) - 0.1, np.fmax(latest_departure, ticks_loc[-1]) + 0.1)
     return ax
 
-def duration_vs_departure(df, start='home', end='work', order=1, gbr=False):
+def duration_vs_departure(df, start='home', end='work', order=1, gbr=False, dtr=False):
     fig = plt.figure()
     # Apply the default theme
     sns.set_theme()
@@ -102,21 +102,27 @@ def duration_vs_departure(df, start='home', end='work', order=1, gbr=False):
     
     # Plot linear prediction line
     #ax = linear_prediction_line(ax, df) # This produces a line in the plot but does not look right
-    
-    # Plot decision tree regressor - not yet working
-    # Last error: ValueError: Number of labels=13 does not match number of samples=1
-    # ax = decision_tree_regressor(ax, start, end, df)
 
     # Practice with statsmodels
     x, y = model.linear_prediction_from_statsmodels(df, start, end)
     ax.plot(x, y, c='b')
 
+    # Split data into training and test sets
+    if(gbr or dtr):
+        X_train, X_test, y_train, y_test = dp.preprocess_data(start, end, df)
+
     # Practice with gradient boosting regression
     if(gbr):
-        X_train, X_test, y_train, y_test, params = dp.preprocess_data(start, end, df)
-        reg, mse = model.fit_gbr(X_train, X_test, y_train, y_test, params)
-        x, y = model.prediction_from_gbr(reg, df, start)
+        reg, mse, params = model.fit_gbr(X_train, X_test, y_train, y_test)
+        x, y = model.prediction(reg, df, start)
         ax.plot(x, y, c='c')
+
+    # Practice with decision tree regression
+    if(dtr):
+        dtr, mse = model.fit_dtr(X_train, X_test, y_train, y_test)
+        x, y = model.prediction(dtr, df, start)
+        ax.plot(x, y, c='g')
+
 
     # Specfiy axis labels
     ax.set(xlabel=start.capitalize() + ' Departure Time',
