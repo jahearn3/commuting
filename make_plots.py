@@ -82,7 +82,7 @@ def time_xticks(ax, earliest_departure, latest_departure):
     #ax.set_xlim(np.fmin(earliest_departure, ticks_loc[0]) - 0.1, np.fmax(latest_departure, ticks_loc[-1]) + 0.1)
     return ax
 
-def duration_vs_departure(df, start='home', end='work', order=1, gbr=False, dtr=False):
+def duration_vs_departure(df, start='home', end='work', order=1, gbr=False, dtr=False, rfr=False):
     fig = plt.figure()
     # Apply the default theme
     sns.set_theme()
@@ -105,24 +105,31 @@ def duration_vs_departure(df, start='home', end='work', order=1, gbr=False, dtr=
 
     # Practice with statsmodels
     x, y = model.linear_prediction_from_statsmodels(df, start, end)
-    ax.plot(x, y, c='b')
+    ax.plot(x, y, c='b', label='Linear')
 
     # Split data into training and test sets
-    if(gbr or dtr):
+    if(gbr or dtr or rfr):
         X_train, X_test, y_train, y_test = dp.preprocess_data(start, end, df)
 
     # Practice with gradient boosting regression
     if(gbr):
         reg, mse, params = model.fit_gbr(X_train, X_test, y_train, y_test)
         x, y = model.prediction(reg, df, start)
-        ax.plot(x, y, c='c')
+        ax.plot(x, y, c='c', label='Gradient Boosting')
 
     # Practice with decision tree regression
     if(dtr):
         dtr, mse = model.fit_dtr(X_train, X_test, y_train, y_test)
         x, y = model.prediction(dtr, df, start)
-        ax.plot(x, y, c='g')
+        ax.plot(x, y, c='g', label='Decision Tree')
 
+    if(rfr):
+        rfr, mse = model.fit_rfr(X_train, X_test, y_train, y_test)
+        x, y = model.prediction(rfr, df, start)
+        ax.plot(x, y, c='m', label='Random Forest')
+
+    if(gbr or dtr or rfr):
+        ax.legend(loc=1, fontsize=10)
 
     # Specfiy axis labels
     ax.set(xlabel=start.capitalize() + ' Departure Time',

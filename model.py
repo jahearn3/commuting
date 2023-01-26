@@ -6,7 +6,7 @@ from sklearn.model_selection import train_test_split, cross_val_score, GridSearc
 #from sklearn.model_selection import KFold 
 from sklearn.metrics import mean_squared_error as MSE
 from sklearn.inspection import permutation_importance 
-from sklearn.ensemble import GradientBoostingRegressor
+from sklearn.ensemble import GradientBoostingRegressor, RandomForestRegressor
 from sklearn.metrics import r2_score, make_scorer
 
 import warnings
@@ -91,6 +91,44 @@ def fit_gbr(X_train, X_test, y_train, y_test):
     # mse = MSE(y_test, reg.predict(X_test))
     # print("The mean squared error (MSE) on test set: {:.4f}".format(mse))
     return reg, mse, params 
+
+def fit_rfr(X_train, X_test, y_train, y_test):
+    # These params were determined the best through the below GridSearchCV
+    params = {
+        "n_estimators": 200,
+        "max_depth": 3,
+        "max_features": 'sqrt',
+        "random_state": 18,
+    }
+    rf = RandomForestRegressor(**params)
+    # rf = RandomForestRegressor(n_estimators = 300, max_features = 'sqrt', max_depth = 5, random_state = 18)
+    rf_fit = rf.fit(X_train, y_train)
+    mse = MSE(y_test, rf.predict(X_test))
+    print(f'RFR mean squared error (MSE) on test set: {mse}')
+
+    ## Using GridSearchCV to find the best params: this works but takes a few minutes to run 
+    ## Define Grid 
+    # grid = { 
+    #     'n_estimators': [200,300,400,500],
+    #     'max_features': ['sqrt','log2'],
+    #     'max_depth' : [3,4,5,6,7],
+    #     'random_state' : [18]
+    # }
+    # ## show start time
+    # # print(datetime.now())
+    # ## Grid Search function
+    # CV_rfr = GridSearchCV(estimator=RandomForestRegressor(), param_grid=grid, cv= 5)
+    # CV_rfr.fit(X_train, y_train)
+    # mse = MSE(y_test, CV_rfr.predict(X_test))
+    # print(f'CVRFR mean squared error (MSE) on test set: {mse}')
+    # ## show end time
+    # # print(datetime.now())
+    # print('Best params: ')
+    # print(CV_rfr.best_params_)
+    # Best params: 
+    # {'max_depth': 3, 'max_features': 'sqrt', 'n_estimators': 200, 'random_state': 18}
+
+    return rf, mse 
 
 def prediction(reg, df, start):
 # def prediction_from_gbr(reg, df, start):
