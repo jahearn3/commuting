@@ -65,6 +65,6 @@ def preprocess_data(start, end, df):
     #print(y)
     #X = df_notna.drop(['minutes_to_' + end], axis=1)
     #print(X)
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.1, random_state=13)
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=13)
     return X_train, X_test, y_train, y_test 
 

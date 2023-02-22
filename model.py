@@ -8,6 +8,9 @@ from sklearn.metrics import mean_squared_error as MSE
 from sklearn.inspection import permutation_importance 
 from sklearn.ensemble import GradientBoostingRegressor, RandomForestRegressor
 from sklearn.metrics import r2_score, make_scorer
+from keras.models import Sequential
+from keras.layers import Dense 
+from xgboost import XGBRegressor
 
 import warnings
 
@@ -32,7 +35,8 @@ def linear_prediction_from_statsmodels(df, start, end, num=20):
     #print(mdl_duration_vs_departure.params) # Print the parameters of the fitted model
     coeffs = mdl_duration_vs_departure.params # Get the coefficients of mdl_price_vs_conv
     x = np.linspace(df[start + '_departure_time_hr'].min(), df[start + '_departure_time_hr'].max(), num)
-    return x, coeffs[0] + (coeffs[1] * x) 
+    y = coeffs[0] + (coeffs[1] * x)
+    return x, y
 
 def compare(df, start, end):
     print('correlation: ' + str(df[start + '_departure_time_hr'].corr(df['minutes_to_' + end])))
@@ -41,6 +45,8 @@ def fit_dtr(X_train, X_test, y_train, y_test):
     seed = 3
     dt = DecisionTreeRegressor(max_depth=8, random_state=seed)
     dt.fit(X_train, y_train)
+    mse = MSE(y_train, dt.predict(X_train))
+    print(f'DTR mean squared error (MSE) on training set: {mse}')
     mse = MSE(y_test, dt.predict(X_test))
     print(f'DTR mean squared error (MSE) on test set: {mse}')
     return dt, mse
@@ -64,6 +70,8 @@ def fit_gbr(X_train, X_test, y_train, y_test):
 
     reg = GradientBoostingRegressor(**params)
     reg_fit = reg.fit(X_train, y_train)
+    mse = MSE(y_train, reg.predict(X_train))
+    print(f'GBR mean squared error (MSE) on training set: {mse}')
     mse = MSE(y_test, reg.predict(X_test))
     print(f'GBR mean squared error (MSE) on test set: {mse}')
 
@@ -92,6 +100,24 @@ def fit_gbr(X_train, X_test, y_train, y_test):
     # print("The mean squared error (MSE) on test set: {:.4f}".format(mse))
     return reg, mse, params 
 
+def fit_xgbr(X_train, X_test, y_train, y_test):
+    # params = {
+    #     "n_estimators": 500,
+    #     "max_depth": 6,
+    #     "min_samples_split": 4,
+    #     "learning_rate": 0.01,
+    #     "loss": "squared_error"#,
+    # }
+    
+    # reg = XGBRegressor(**params)
+    reg = XGBRegressor()
+    reg_fit = reg.fit(X_train, y_train)
+    mse = MSE(y_train, reg.predict(X_train))
+    print(f'XGBR mean squared error (MSE) on training set: {mse}')
+    mse = MSE(y_test, reg.predict(X_test))
+    print(f'XGBR mean squared error (MSE) on test set: {mse}')
+    return reg, mse
+
 def fit_rfr(X_train, X_test, y_train, y_test):
     # These params were determined the best through the below GridSearchCV
     params = {
@@ -103,6 +129,8 @@ def fit_rfr(X_train, X_test, y_train, y_test):
     rf = RandomForestRegressor(**params)
     # rf = RandomForestRegressor(n_estimators = 300, max_features = 'sqrt', max_depth = 5, random_state = 18)
     rf_fit = rf.fit(X_train, y_train)
+    mse = MSE(y_train, rf.predict(X_train))
+    print(f'RFR mean squared error (MSE) on training set: {mse}')
     mse = MSE(y_test, rf.predict(X_test))
     print(f'RFR mean squared error (MSE) on test set: {mse}')
 
@@ -129,6 +157,19 @@ def fit_rfr(X_train, X_test, y_train, y_test):
     # {'max_depth': 3, 'max_features': 'sqrt', 'n_estimators': 200, 'random_state': 18}
 
     return rf, mse 
+
+def fit_nn(X_train, X_test, y_train, y_test):
+    nn = Sequential()
+    nn.add(Dense(5, kernel_initializer='normal', activation='relu', input_dim=X_train.shape[1]))
+    nn.add(Dense(5, kernel_initializer='normal', activation='tanh'))
+    nn.add(Dense(1, kernel_initializer='normal'))
+    nn.compile(loss='mean_squared_error', optimizer='adam')
+    nn_fit = nn.fit(X_train, y_train, batch_size=int(X_train.shape[0]), epochs=3)
+    mse = MSE(y_train, nn.predict(X_train))
+    print(f'NN mean squared error (MSE) on training set: {mse}')
+    mse = MSE(y_test, nn.predict(X_test))
+    print(f'NN mean squared error (MSE) on test set: {mse}')
+    return nn, mse
 
 def prediction(reg, df, start):
 # def prediction_from_gbr(reg, df, start):

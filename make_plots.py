@@ -82,7 +82,7 @@ def time_xticks(ax, earliest_departure, latest_departure):
     #ax.set_xlim(np.fmin(earliest_departure, ticks_loc[0]) - 0.1, np.fmax(latest_departure, ticks_loc[-1]) + 0.1)
     return ax
 
-def duration_vs_departure(df, start='home', end='work', order=1, gbr=False, dtr=False, rfr=False):
+def duration_vs_departure(df, start='home', end='work', order=1, gbr=False, dtr=False, rfr=False, nn=False, xgb=False):
     fig = plt.figure()
     # Apply the default theme
     sns.set_theme()
@@ -103,13 +103,19 @@ def duration_vs_departure(df, start='home', end='work', order=1, gbr=False, dtr=
     # Plot linear prediction line
     #ax = linear_prediction_line(ax, df) # This produces a line in the plot but does not look right
 
+    # y_complete = np.array(df_notna['minutes_to_' + end])
+
     # Practice with statsmodels
     x, y = model.linear_prediction_from_statsmodels(df, start, end)
     ax.plot(x, y, c='b', label='Linear')
 
     # Split data into training and test sets
-    if(gbr or dtr or rfr):
+    if(gbr or dtr or rfr or nn or xgb):
         X_train, X_test, y_train, y_test = dp.preprocess_data(start, end, df)
+        print(f'shape of X_train: {X_train.shape}')
+        print(f'shape of y_train: {y_train.shape}')
+        print(f'shape of X_test: {X_test.shape}')
+        print(f'shape of y_test: {y_test.shape}')
 
     # Practice with gradient boosting regression
     if(gbr):
@@ -127,8 +133,18 @@ def duration_vs_departure(df, start='home', end='work', order=1, gbr=False, dtr=
         rfr, mse = model.fit_rfr(X_train, X_test, y_train, y_test)
         x, y = model.prediction(rfr, df, start)
         ax.plot(x, y, c='m', label='Random Forest')
+    
+    if(nn):
+        nn, mse = model.fit_nn(X_train, X_test, y_train, y_test)
+        x, y = model.prediction(nn, df, start)
+        ax.plot(x, y, c='orange', label='Neural Network')
 
-    if(gbr or dtr or rfr):
+    if(xgb):
+        xgbr, mse = model.fit_xgbr(X_train, X_test, y_train, y_test)
+        x, y = model.prediction(xgbr, df, start)
+        ax.plot(x, y, c='k', label='XGBoost')
+
+    if(gbr or dtr or rfr or nn or xgb):
         ax.legend(loc=1, fontsize=10)
 
     # Specfiy axis labels
