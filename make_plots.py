@@ -82,7 +82,7 @@ def time_xticks(ax, earliest_departure, latest_departure):
     #ax.set_xlim(np.fmin(earliest_departure, ticks_loc[0]) - 0.1, np.fmax(latest_departure, ticks_loc[-1]) + 0.1)
     return ax
 
-def duration_vs_departure(df, start='home', end='work', order=1, gbr=False, dtr=False, rfr=False, nn=False, xgb=False):
+def duration_vs_departure(df, start='home', end='work', order=1, gbr=False, dtr=False, rfr=False, nn=False, xgb=False, ensemble_r=False):
     fig = plt.figure()
     # Apply the default theme
     sns.set_theme()
@@ -119,30 +119,46 @@ def duration_vs_departure(df, start='home', end='work', order=1, gbr=False, dtr=
 
     # Practice with gradient boosting regression
     if(gbr):
-        reg, mse, params = model.fit_gbr(X_train, X_test, y_train, y_test)
-        x, y = model.prediction(reg, df, start)
+        gbreg, mse, params = model.fit_gbr(X_train, X_test, y_train, y_test)
+        x, y = model.prediction(gbreg, df, start)
         ax.plot(x, y, c='c', label='Gradient Boosting')
 
     # Practice with decision tree regression
     if(dtr):
-        dtr, mse = model.fit_dtr(X_train, X_test, y_train, y_test)
-        x, y = model.prediction(dtr, df, start)
+        dtreg, mse = model.fit_dtr(X_train, X_test, y_train, y_test)
+        x, y = model.prediction(dtreg, df, start)
         ax.plot(x, y, c='g', label='Decision Tree')
 
     if(rfr):
-        rfr, mse = model.fit_rfr(X_train, X_test, y_train, y_test)
-        x, y = model.prediction(rfr, df, start)
+        rfreg, mse = model.fit_rfr(X_train, X_test, y_train, y_test)
+        x, y = model.prediction(rfreg, df, start)
         ax.plot(x, y, c='m', label='Random Forest')
     
     if(nn):
-        nn, mse = model.fit_nn(X_train, X_test, y_train, y_test)
-        x, y = model.prediction(nn, df, start)
+        nnreg, mse = model.fit_nn(X_train, X_test, y_train, y_test)
+        x, y = model.prediction(nnreg, df, start)
         ax.plot(x, y, c='orange', label='Neural Network')
 
     if(xgb):
-        xgbr, mse = model.fit_xgbr(X_train, X_test, y_train, y_test)
-        x, y = model.prediction(xgbr, df, start)
+        xgbreg, mse = model.fit_xgbr(X_train, X_test, y_train, y_test)
+        x, y = model.prediction(xgbreg, df, start)
         ax.plot(x, y, c='k', label='XGBoost')
+
+    if(ensemble_r):
+        estimators = []
+        if(gbr):
+            estimators.append(('gb', gbreg))
+        if(dtr):
+            estimators.append(('dt', dtreg))
+        if(rfr):
+            estimators.append(('rf', rfreg))
+        if(nn):
+            estimators.append(('nn', nnreg))
+        if(xgb):
+            estimators.append(('xg', xgbreg))
+        ensmbl, mse = model.fit_ensemble(X_train, X_test, y_train, y_test, estimators)
+        x, y = model.prediction(ensmbl, df, start)
+        ax.plot(x, y, c='chartreuse', label='Ensemble')
 
     if(gbr or dtr or rfr or nn or xgb):
         ax.legend(loc=1, fontsize=10)
@@ -161,10 +177,10 @@ def duration_vs_departure(df, start='home', end='work', order=1, gbr=False, dtr=
     
     # Plot the gradient boosting regression training deviance
     if(gbr):
-        plot_gbr_training_deviance(start, end, params, reg, X_test, y_test)
+        plot_gbr_training_deviance(start, end, params, gbreg, X_test, y_test)
     
     if(gbr):
-        plot_feature_importance(start, end, reg, X_test, y_test, df)
+        plot_feature_importance(start, end, gbreg, X_test, y_test, df)
     
 #fig, (ax0, ax1) = plt.subplots(nrows=2, ncols=1, sharex=True)
 #sns.set(color_codes=True)

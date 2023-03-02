@@ -6,7 +6,7 @@ from sklearn.model_selection import train_test_split, cross_val_score, GridSearc
 #from sklearn.model_selection import KFold 
 from sklearn.metrics import mean_squared_error as MSE
 from sklearn.inspection import permutation_importance 
-from sklearn.ensemble import GradientBoostingRegressor, RandomForestRegressor
+from sklearn.ensemble import GradientBoostingRegressor, RandomForestRegressor, VotingRegressor
 from sklearn.metrics import r2_score, make_scorer
 from keras.models import Sequential
 from keras.layers import Dense 
@@ -170,6 +170,16 @@ def fit_nn(X_train, X_test, y_train, y_test):
     mse = MSE(y_test, nn.predict(X_test))
     print(f'NN mean squared error (MSE) on test set: {mse}')
     return nn, mse
+
+def fit_ensemble(X_train, X_test, y_train, y_test, estimators):
+    # This ensemble approach uses the VotingRegressor method
+    reg = VotingRegressor(estimators=estimators)
+    reg_fit = reg.fit(X_train, y_train)
+    mse = MSE(y_train, reg.predict(X_train))
+    print(f'Ensemble mean squared error (MSE) on training set: {mse}')
+    mse = MSE(y_test, reg.predict(X_test))
+    print(f'Ensemble mean squared error (MSE) on test set: {mse}')
+    return reg, mse
 
 def prediction(reg, df, start):
 # def prediction_from_gbr(reg, df, start):
