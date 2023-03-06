@@ -87,9 +87,16 @@ def duration_vs_departure(df, start='home', end='work', order=1, gbr=False, dtr=
     # Apply the default theme
     sns.set_theme()
 
-    # Create a visualization
+    # Initialize the visualization
     #ax = sns.regplot(data=df, x=start + '_departure_time_hr', y='minutes_to_' + end, scatter=False, ci=None, color='r', order=order)#, scatter_kws={'s':1}) # to get the linear trendline
     ax = sns.scatterplot(data=df, x=start + '_departure_time_hr', y='minutes_to_' + end, hue='day_of_week', hue_order=['Mon', 'Tue', 'Wed', 'Thu', 'Fri'], s=1)
+    
+    # Highlight the most recent trip by putting a yellow halo around it
+    x_latest = df[start + '_departure_time_hr'][df.index[-1]]
+    y_latest = df['minutes_to_' + end][df.index[-1]]
+    ax.scatter(x_latest, y_latest, c='y', s=100)
+    
+    # Add size of scatter points by mileage, but don't add mileage to the legend
     ax = sns.scatterplot(data=df, x=start + '_departure_time_hr', y='minutes_to_' + end, hue='day_of_week', hue_order=['Mon', 'Tue', 'Wed', 'Thu', 'Fri'], size='mileage_to_' + end, legend=False) # to plot the scatter points colored by day of the week
     #ax = sns.lmplot(data=df, x='home_departure_time_hr', y='minutes_to_work', ci=None) # This has not worked due to FacetGrid issues
     
@@ -167,6 +174,8 @@ def duration_vs_departure(df, start='home', end='work', order=1, gbr=False, dtr=
     ax.set(xlabel=start.capitalize() + ' Departure Time',
        ylabel='Minutes to ' + end.capitalize(),
        title='Commuting Time')
+    
+
 
     # Save the plot 
     plt.savefig('duration_vs_departure_from_' + start + '_to_' + end + '.png')
