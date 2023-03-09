@@ -191,6 +191,8 @@ def duration_vs_departure(df, start='home', end='work', order=1, gbr=False, dtr=
     if(gbr):
         plot_feature_importance(start, end, gbreg, X_test, y_test, df)
     
+    minutes_violin(start, end, df)
+    
 #fig, (ax0, ax1) = plt.subplots(nrows=2, ncols=1, sharex=True)
 #sns.set(color_codes=True)
 #sns.set_palette('colorblind')
@@ -215,3 +217,21 @@ def duration_vs_departure(df, start='home', end='work', order=1, gbr=False, dtr=
 #ax.set(xlabel='Minutes to Work', title='Commuting Duration vs. Departure Time')
 #plt.show()
 #plt.clf()
+
+# violinplot of minutes to work
+def minutes_violin(start, end, df):
+    ax = sns.violinplot(data=df, x='minutes_to_' + end)
+    plt.savefig(f'minutes_from_{start}_to_{end}_violinplot')
+    plt.clf()
+
+    ax = sns.violinplot(data=df, x='minutes_to_' + end, y='day_of_week', order=['Mon', 'Tue', 'Wed', 'Thu', 'Fri'])
+    plt.savefig(f'minutes_from_{start}_to_{end}_by_day_violinplot')
+    plt.clf()
+
+    ax = sns.violinplot(data=df, x=start + '_departure_time_hr')
+    plt.savefig(f'departure_time_from_{start}_to_{end}_violinplot')
+    plt.clf()
+
+    ax = sns.violinplot(data=df, x=start + '_departure_time_hr', y='day_of_week', order=['Mon', 'Tue', 'Wed', 'Thu', 'Fri'])
+    plt.savefig(f'departure_time_from_{start}_to_{end}_by_day_violinplot')
+    plt.clf()
