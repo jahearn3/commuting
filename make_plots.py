@@ -220,6 +220,7 @@ def duration_vs_departure(df, start='home', end='work', order=1, gbr=False, dtr=
 
 # violinplot of minutes to work
 def minutes_violin(start, end, df):
+    """Violin plots for minutes and departure time, both as a whole and by day of week"""
     ax = sns.violinplot(data=df, x='minutes_to_' + end)
     plt.savefig(f'minutes_from_{start}_to_{end}_violinplot')
     plt.clf()

@@ -41,14 +41,21 @@ def linear_prediction_from_statsmodels(df, start, end, num=20):
 def compare(df, start, end):
     print('correlation: ' + str(df[start + '_departure_time_hr'].corr(df['minutes_to_' + end])))
 
+def compute_mse(reg, abbreviation, X_train, X_test, y_train, y_test):
+    '''Computes the mean squared error for training, test, and complete datasets'''
+    X = [X_train, X_test, pd.concat([X_test, X_train])]
+    Y = [y_train, y_test, np.concatenate((y_test, y_train), axis=0)]
+    labels = ['training', 'test', 'complete']
+    for (x, y, label) in zip(X, Y, labels):
+        mse = MSE(y, reg.predict(x))
+        print(f'{abbreviation} mean squared error (MSE) on {label} set: {mse}')
+    return mse
+
 def fit_dtr(X_train, X_test, y_train, y_test):
     seed = 3
     dt = DecisionTreeRegressor(max_depth=8, random_state=seed)
     dt.fit(X_train, y_train)
-    mse = MSE(y_train, dt.predict(X_train))
-    print(f'DTR mean squared error (MSE) on training set: {mse}')
-    mse = MSE(y_test, dt.predict(X_test))
-    print(f'DTR mean squared error (MSE) on test set: {mse}')
+    mse = compute_mse(dt, 'DTR', X_train, X_test, y_train, y_test)
     return dt, mse
 
 def fit_gbr(X_train, X_test, y_train, y_test):
@@ -70,10 +77,7 @@ def fit_gbr(X_train, X_test, y_train, y_test):
 
     reg = GradientBoostingRegressor(**params)
     reg_fit = reg.fit(X_train, y_train)
-    mse = MSE(y_train, reg.predict(X_train))
-    print(f'GBR mean squared error (MSE) on training set: {mse}')
-    mse = MSE(y_test, reg.predict(X_test))
-    print(f'GBR mean squared error (MSE) on test set: {mse}')
+    mse = compute_mse(reg, 'GBR', X_train, X_test, y_train, y_test)
 
     # reg_scores = cross_val_score(reg_fit, X_train, y_train, cv = 5)
     # print("mean cross validation score: {}".format(np.mean(reg_scores)))
@@ -96,8 +100,6 @@ def fit_gbr(X_train, X_test, y_train, y_test):
     # result = r2_score(y_test, g_cv.best_estimator_.predict(X_test))
     # print(result)
 
-    # mse = MSE(y_test, reg.predict(X_test))
-    # print("The mean squared error (MSE) on test set: {:.4f}".format(mse))
     return reg, mse, params 
 
 def fit_xgbr(X_train, X_test, y_train, y_test):
@@ -111,11 +113,8 @@ def fit_xgbr(X_train, X_test, y_train, y_test):
     
     # reg = XGBRegressor(**params)
     reg = XGBRegressor()
-    reg_fit = reg.fit(X_train, y_train)
-    mse = MSE(y_train, reg.predict(X_train))
-    print(f'XGBR mean squared error (MSE) on training set: {mse}')
-    mse = MSE(y_test, reg.predict(X_test))
-    print(f'XGBR mean squared error (MSE) on test set: {mse}')
+    reg.fit(X_train, y_train)
+    mse = compute_mse(reg, 'XGBR', X_train, X_test, y_train, y_test)
     return reg, mse
 
 def fit_rfr(X_train, X_test, y_train, y_test):
@@ -128,11 +127,8 @@ def fit_rfr(X_train, X_test, y_train, y_test):
     }
     rf = RandomForestRegressor(**params)
     # rf = RandomForestRegressor(n_estimators = 300, max_features = 'sqrt', max_depth = 5, random_state = 18)
-    rf_fit = rf.fit(X_train, y_train)
-    mse = MSE(y_train, rf.predict(X_train))
-    print(f'RFR mean squared error (MSE) on training set: {mse}')
-    mse = MSE(y_test, rf.predict(X_test))
-    print(f'RFR mean squared error (MSE) on test set: {mse}')
+    rf.fit(X_train, y_train)
+    mse = compute_mse(rf, 'RFR', X_train, X_test, y_train, y_test)
 
     ## Using GridSearchCV to find the best params: this works but takes a few minutes to run 
     ## Define Grid 
@@ -165,20 +161,14 @@ def fit_nn(X_train, X_test, y_train, y_test):
     nn.add(Dense(1, kernel_initializer='normal'))
     nn.compile(loss='mean_squared_error', optimizer='adam')
     nn_fit = nn.fit(X_train, y_train, batch_size=int(X_train.shape[0]), epochs=3)
-    mse = MSE(y_train, nn.predict(X_train))
-    print(f'NN mean squared error (MSE) on training set: {mse}')
-    mse = MSE(y_test, nn.predict(X_test))
-    print(f'NN mean squared error (MSE) on test set: {mse}')
+    mse = compute_mse(nn, 'NN', X_train, X_test, y_train, y_test)
     return nn, mse
 
 def fit_ensemble(X_train, X_test, y_train, y_test, estimators):
     # This ensemble approach uses the VotingRegressor method
     reg = VotingRegressor(estimators=estimators)
-    reg_fit = reg.fit(X_train, y_train)
-    mse = MSE(y_train, reg.predict(X_train))
-    print(f'Ensemble mean squared error (MSE) on training set: {mse}')
-    mse = MSE(y_test, reg.predict(X_test))
-    print(f'Ensemble mean squared error (MSE) on test set: {mse}')
+    reg.fit(X_train, y_train)
+    mse = compute_mse(reg, 'Ensemble', X_train, X_test, y_train, y_test)
     return reg, mse
 
 def prediction(reg, df, start):
