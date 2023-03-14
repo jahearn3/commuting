@@ -7,6 +7,7 @@ from statsmodels.formula.api import ols
 from sklearn.metrics import mean_squared_error as MSE
 from sklearn.inspection import permutation_importance 
 from sklearn import ensemble
+import time
 
 import warnings
 warnings.simplefilter(action='ignore', category=FutureWarning)
@@ -94,7 +95,7 @@ def duration_vs_departure(df, start='home', end='work', order=1, gbr=False, dtr=
     # Highlight the most recent trip by putting a yellow halo around it
     x_latest = df[start + '_departure_time_hr'][df.index[-1]]
     y_latest = df['minutes_to_' + end][df.index[-1]]
-    ax.scatter(x_latest, y_latest, c='y', s=100)
+    ax.scatter(x_latest, y_latest, c='#FFFF14', s=100)
     
     # Add size of scatter points by mileage, but don't add mileage to the legend
     ax = sns.scatterplot(data=df, x=start + '_departure_time_hr', y='minutes_to_' + end, hue='day_of_week', hue_order=['Mon', 'Tue', 'Wed', 'Thu', 'Fri'], size='mileage_to_' + end, legend=False) # to plot the scatter points colored by day of the week
@@ -126,32 +127,43 @@ def duration_vs_departure(df, start='home', end='work', order=1, gbr=False, dtr=
 
     # Practice with gradient boosting regression
     if(gbr):
+        start_time = time.time()
         gbreg, mse, params = model.fit_gbr(X_train, X_test, y_train, y_test)
         x, y = model.prediction(gbreg, df, start)
+        print("GBR --- %s seconds ---" % (time.time() - start_time))
         ax.plot(x, y, c='c', label='Gradient Boosting')
 
     # Practice with decision tree regression
     if(dtr):
+        start_time = time.time()
         dtreg, mse = model.fit_dtr(X_train, X_test, y_train, y_test)
         x, y = model.prediction(dtreg, df, start)
+        print("DTR --- %s seconds ---" % (time.time() - start_time))
         ax.plot(x, y, c='g', label='Decision Tree')
 
     if(rfr):
+        start_time = time.time()
         rfreg, mse = model.fit_rfr(X_train, X_test, y_train, y_test)
         x, y = model.prediction(rfreg, df, start)
+        print("RFR --- %s seconds ---" % (time.time() - start_time))
         ax.plot(x, y, c='m', label='Random Forest')
     
     if(nn):
+        start_time = time.time()
         nnreg, mse = model.fit_nn(X_train, X_test, y_train, y_test)
         x, y = model.prediction(nnreg, df, start)
+        print("NN --- %s seconds ---" % (time.time() - start_time))
         ax.plot(x, y, c='orange', label='Neural Network')
 
     if(xgb):
+        start_time = time.time()
         xgbreg, mse = model.fit_xgbr(X_train, X_test, y_train, y_test)
         x, y = model.prediction(xgbreg, df, start)
+        print("XGB --- %s seconds ---" % (time.time() - start_time))
         ax.plot(x, y, c='k', label='XGBoost')
 
     if(ensemble_r):
+        start_time = time.time()
         estimators = []
         if(gbr):
             estimators.append(('gb', gbreg))
@@ -165,6 +177,7 @@ def duration_vs_departure(df, start='home', end='work', order=1, gbr=False, dtr=
             estimators.append(('xg', xgbreg))
         ensmbl, mse = model.fit_ensemble(X_train, X_test, y_train, y_test, estimators)
         x, y = model.prediction(ensmbl, df, start)
+        print("Ensemble --- %s seconds ---" % (time.time() - start_time))
         ax.plot(x, y, c='chartreuse', label='Ensemble')
 
     if(gbr or dtr or rfr or nn or xgb):
