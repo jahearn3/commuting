@@ -115,7 +115,7 @@ def duration_vs_departure(df, start='home', end='work', order=1, gbr=False, dtr=
 
     # Practice with statsmodels
     x, y = model.linear_prediction_from_statsmodels(df, start, end)
-    ax.plot(x, y, c='b', label='Linear')
+    ax.plot(x, y, c='b', label='Linear', linestyle='dotted')
 
     # Split data into training and test sets
     if(gbr or dtr or rfr or nn or xgb):
@@ -128,7 +128,9 @@ def duration_vs_departure(df, start='home', end='work', order=1, gbr=False, dtr=
     # Practice with gradient boosting regression
     if(gbr):
         start_time = time.time()
-        gbreg, mse, params = model.fit_gbr(X_train, X_test, y_train, y_test)
+        # gbreg, mse, params = model.fit_gbr(X_train, X_test, y_train, y_test)
+        gbreg, mse, params = model.fit_gbr_with_grid_search(X_train, X_test, y_train, y_test)
+        print(params)
         x, y = model.prediction(gbreg, df, start)
         print("GBR --- %s seconds ---" % (time.time() - start_time))
         ax.plot(x, y, c='c', label='Gradient Boosting')
@@ -136,14 +138,18 @@ def duration_vs_departure(df, start='home', end='work', order=1, gbr=False, dtr=
     # Practice with decision tree regression
     if(dtr):
         start_time = time.time()
-        dtreg, mse = model.fit_dtr(X_train, X_test, y_train, y_test)
+        # dtreg, mse = model.fit_dtr(X_train, X_test, y_train, y_test)
+        dtreg, mse, params = model.fit_dtr_with_grid_search(X_train, X_test, y_train, y_test)
+        print(params)
         x, y = model.prediction(dtreg, df, start)
         print("DTR --- %s seconds ---" % (time.time() - start_time))
         ax.plot(x, y, c='g', label='Decision Tree')
 
     if(rfr):
         start_time = time.time()
-        rfreg, mse = model.fit_rfr(X_train, X_test, y_train, y_test)
+        # rfreg, mse = model.fit_rfr(X_train, X_test, y_train, y_test)
+        rfreg, mse, params = model.fit_rfr_with_grid_search(X_train, X_test, y_train, y_test)
+        print(params)
         x, y = model.prediction(rfreg, df, start)
         print("RFR --- %s seconds ---" % (time.time() - start_time))
         ax.plot(x, y, c='m', label='Random Forest')
@@ -157,7 +163,9 @@ def duration_vs_departure(df, start='home', end='work', order=1, gbr=False, dtr=
 
     if(xgb):
         start_time = time.time()
-        xgbreg, mse = model.fit_xgbr(X_train, X_test, y_train, y_test)
+        # xgbreg, mse = model.fit_xgbr(X_train, X_test, y_train, y_test)
+        xgbreg, mse, params = model.fit_xgbr_with_grid_search(X_train, X_test, y_train, y_test)
+        print(params)
         x, y = model.prediction(xgbreg, df, start)
         print("XGB --- %s seconds ---" % (time.time() - start_time))
         ax.plot(x, y, c='k', label='XGBoost')
@@ -198,11 +206,11 @@ def duration_vs_departure(df, start='home', end='work', order=1, gbr=False, dtr=
     plot_residuals(start, end, df)
     
     # Plot the gradient boosting regression training deviance
-    if(gbr):
-        plot_gbr_training_deviance(start, end, params, gbreg, X_test, y_test)
+    # if(gbr):
+    #     plot_gbr_training_deviance(start, end, params, gbreg, X_test, y_test)
     
-    if(gbr):
-        plot_feature_importance(start, end, gbreg, X_test, y_test, df)
+    # if(gbr):
+    #     plot_feature_importance(start, end, gbreg, X_test, y_test, df)
     
     minutes_violin(start, end, df)
     

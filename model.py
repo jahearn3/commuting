@@ -2,8 +2,7 @@ import numpy as np
 import pandas as pd 
 from statsmodels.formula.api import ols
 from sklearn.tree import DecisionTreeRegressor
-from sklearn.model_selection import train_test_split, cross_val_score, GridSearchCV
-#from sklearn.model_selection import KFold 
+from sklearn.model_selection import train_test_split, cross_val_score, KFold, GridSearchCV
 from sklearn.metrics import mean_squared_error as MSE
 from sklearn.inspection import permutation_importance 
 from sklearn.ensemble import GradientBoostingRegressor, RandomForestRegressor, VotingRegressor
@@ -58,6 +57,24 @@ def fit_dtr(X_train, X_test, y_train, y_test):
     mse = compute_mse(dt, 'DTR', X_train, X_test, y_train, y_test)
     return dt, mse
 
+def fit_dtr_with_grid_search(X_train, X_test, y_train, y_test):
+    X = pd.concat([X_train, X_test], axis=0)
+    y = np.concatenate((y_train, y_test), axis=0)
+    dt = DecisionTreeRegressor()
+    param_grid = {'max_depth': [5, 10, 20],
+              'min_samples_split': [2, 5, 10],
+              'min_samples_leaf': [1, 2, 4],
+              'max_features': ['sqrt']
+              }
+    grid_search = GridSearchCV(estimator=dt, param_grid=param_grid, cv=5, n_jobs=-1, scoring='neg_mean_squared_error')
+    grid_search.fit(X, y)
+    best_params = grid_search.best_params_
+    best_score = grid_search.best_score_
+    best_dt = XGBRegressor(**best_params)
+    best_dt.fit(X_train, y_train)
+
+    return best_dt, best_score, best_params
+
 def fit_gbr(X_train, X_test, y_train, y_test):
     params = {
         "n_estimators": 500,
@@ -102,6 +119,24 @@ def fit_gbr(X_train, X_test, y_train, y_test):
 
     return reg, mse, params 
 
+def fit_gbr_with_grid_search(X_train, X_test, y_train, y_test):
+    X = pd.concat([X_train, X_test], axis=0)
+    y = np.concatenate((y_train, y_test), axis=0)
+    gbm = GradientBoostingRegressor()
+    param_grid = {
+        'learning_rate': [0.1, 0.01, 0.001],
+        'n_estimators': [50, 100, 150],
+        'max_depth': [3, 5, 7]
+    }
+    grid_search = GridSearchCV(estimator=gbm, param_grid=param_grid, cv=5, n_jobs=-1, scoring='neg_mean_squared_error')
+    grid_search.fit(X, y)
+    best_params = grid_search.best_params_
+    best_score = grid_search.best_score_
+    best_gbm = GradientBoostingRegressor(**best_params)
+    best_gbm.fit(X_train, y_train)
+
+    return best_gbm, best_score, best_params
+
 def fit_xgbr(X_train, X_test, y_train, y_test):
     # params = {
     #     "n_estimators": 500,
@@ -116,6 +151,24 @@ def fit_xgbr(X_train, X_test, y_train, y_test):
     reg.fit(X_train, y_train)
     mse = compute_mse(reg, 'XGBR', X_train, X_test, y_train, y_test)
     return reg, mse
+
+def fit_xgbr_with_grid_search(X_train, X_test, y_train, y_test):
+    X = pd.concat([X_train, X_test], axis=0)
+    y = np.concatenate((y_train, y_test), axis=0)
+    xgbm = XGBRegressor()
+    param_grid = {
+        'learning_rate': [0.1, 0.01, 0.001],
+        'n_estimators': [50, 100, 150],
+        'max_depth': [3, 5, 7]
+    }
+    grid_search = GridSearchCV(estimator=xgbm, param_grid=param_grid, cv=5, n_jobs=-1, scoring='neg_mean_squared_error')
+    grid_search.fit(X, y)
+    best_params = grid_search.best_params_
+    best_score = grid_search.best_score_
+    best_xgbm = XGBRegressor(**best_params)
+    best_xgbm.fit(X_train, y_train)
+
+    return best_xgbm, best_score, best_params
 
 def fit_rfr(X_train, X_test, y_train, y_test):
     # These params were determined the best through the below GridSearchCV
@@ -153,6 +206,25 @@ def fit_rfr(X_train, X_test, y_train, y_test):
     # {'max_depth': 3, 'max_features': 'sqrt', 'n_estimators': 200, 'random_state': 18}
 
     return rf, mse 
+
+def fit_rfr_with_grid_search(X_train, X_test, y_train, y_test):
+    X = pd.concat([X_train, X_test], axis=0)
+    y = np.concatenate((y_train, y_test), axis=0)
+    rf = RandomForestRegressor()
+    param_grid = {'n_estimators': [100, 200, 500],
+              'max_features': ['sqrt'],
+              'max_depth': [5, 10, 20],
+              'min_samples_split': [2, 5, 10],
+              'min_samples_leaf': [1, 2, 4],
+              }
+    grid_search = GridSearchCV(estimator=rf, param_grid=param_grid, cv=5, n_jobs=-1, scoring='neg_mean_squared_error')
+    grid_search.fit(X, y)
+    best_params = grid_search.best_params_
+    best_score = grid_search.best_score_
+    best_rf = XGBRegressor(**best_params)
+    best_rf.fit(X_train, y_train)
+
+    return best_rf, best_score, best_params
 
 def fit_nn(X_train, X_test, y_train, y_test):
     nn = Sequential()
