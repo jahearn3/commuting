@@ -8,6 +8,8 @@ from sklearn.metrics import mean_squared_error as MSE
 from sklearn.inspection import permutation_importance 
 from sklearn import ensemble
 import time
+import os
+import re 
 
 import warnings
 warnings.simplefilter(action='ignore', category=FutureWarning)
@@ -15,16 +17,16 @@ warnings.simplefilter(action='ignore', category=FutureWarning)
 import model 
 import data_processing as dp 
 
-def plot_residuals(start, end, df):
+def plot_residuals(plots_folder, start, end, df):
     fig = plt.figure()
     ax = sns.residplot(data=df, x=start + '_departure_time_hr', y='minutes_to_' + end, lowess=True)
     ax = time_xticks(ax, df[start + '_departure_time_hr'].min(), df[start + '_departure_time_hr'].max())
     plt.xlabel("Fitted values")
     plt.ylabel("Residuals")
-    plt.savefig('duration_vs_departure_residuals_from_' + start + '_to_' + end + '.png')
+    plt.savefig(f'{plots_folder}/duration_vs_departure_residuals_from_{start}_to_{end}.png')
     plt.clf()
 
-def plot_gbr_training_deviance(start, end, params, reg, X_test, y_test):
+def plot_gbr_training_deviance(plots_folder, start, end, params, reg, X_test, y_test):
     test_score = np.zeros((params["n_estimators"],), dtype=np.float64)
     for i, y_pred in enumerate(reg.staged_predict(X_test)):
         test_score[i] = reg.loss_(y_test, y_pred)
@@ -37,10 +39,10 @@ def plot_gbr_training_deviance(start, end, params, reg, X_test, y_test):
     plt.legend(loc="upper right")
     plt.xlabel("Boosting Iterations")
     plt.ylabel("Deviance")
-    plt.savefig('duration_vs_departure_training_deviance_from_' + start + '_to_' + end + '.png')
+    plt.savefig(f'{plots_folder}/duration_vs_departure_training_deviance_from_{start}_to_{end}.png')
     plt.clf()
 
-def plot_feature_importance(start, end, reg, X_test, y_test, df):
+def plot_feature_importance(plots_folder, start, end, reg, X_test, y_test, df):
     feature_importance = reg.feature_importances_
     sorted_idx = np.argsort(feature_importance)
     pos = np.arange(sorted_idx.shape[0]) + 0.5
@@ -51,18 +53,16 @@ def plot_feature_importance(start, end, reg, X_test, y_test, df):
     #plt.yticks(pos, [start + '_departure_time_hr', 'day_of_week_Mon', 'day_of_week_Tue', 'day_of_week_Wed', 'day_of_week_Thu'][sorted_idx])
     plt.title("Feature Importance (MDI)")
 
-    result = permutation_importance(
-        reg, X_test, y_test, n_repeats=10, random_state=42, n_jobs=2
-    )
+    result = permutation_importance(reg, X_test, y_test, n_repeats=10, random_state=42, n_jobs=2)
     sorted_idx = result.importances_mean.argsort()
     plt.subplot(1, 2, 2)
     plt.boxplot(
         result.importances[sorted_idx].T,
         vert=False,
         #labels=np.array(df.feature_names)[sorted_idx],
-    )
+        )
     plt.title("Permutation Importance (test set)")
-    plt.savefig('duration_vs_departure_feature_importance_from_' + start + '_to_' + end + '.png')
+    plt.savefig(f'{plots_folder}/duration_vs_departure_feature_importance_from_{start}_to_{end}.png')
     plt.clf()
 
 def time_xticks(ax, earliest_departure, latest_departure):
@@ -83,7 +83,7 @@ def time_xticks(ax, earliest_departure, latest_departure):
     #ax.set_xlim(np.fmin(earliest_departure, ticks_loc[0]) - 0.1, np.fmax(latest_departure, ticks_loc[-1]) + 0.1)
     return ax
 
-def duration_vs_departure(df, start='home', end='work', order=1, gbr=False, dtr=False, rfr=False, nn=False, xgb=False, ensemble_r=False):
+def duration_vs_departure(filename, df, start='home', end='work', gbr=False, dtr=False, rfr=False, nn=False, xgb=False, ensemble_r=False):
     fig = plt.figure()
     # Apply the default theme
     sns.set_theme()
@@ -196,23 +196,33 @@ def duration_vs_departure(df, start='home', end='work', order=1, gbr=False, dtr=
        ylabel='Minutes to ' + end.capitalize(),
        title='Commuting Time')
     
-
+    # Make directory for plots if it doesn't already exist
+    pattern = r'_(.*)\.csv'
+    match = re.search(pattern, filename)
+    if(match):
+        dataset = match.group(1)
+    else:
+        dataset = 'tenino'
+        print('Filename or dataset not recognized.')
+    plots_folder = f'plots_{dataset}' 
+    if not os.path.exists(plots_folder):
+        os.makedirs(plots_folder)
 
     # Save the plot 
-    plt.savefig('duration_vs_departure_from_' + start + '_to_' + end + '.png')
+    plt.savefig(f'{plots_folder}/duration_vs_departure_from_{start}_to_{end}.png')
     plt.clf()
 
     # Plot the residuals 
-    plot_residuals(start, end, df)
+    plot_residuals(plots_folder, start, end, df)
     
     # Plot the gradient boosting regression training deviance
     # if(gbr):
-    #     plot_gbr_training_deviance(start, end, params, gbreg, X_test, y_test)
+    #     plot_gbr_training_deviance(plots_folder, start, end, params, gbreg, X_test, y_test)
     
     # if(gbr):
-    #     plot_feature_importance(start, end, gbreg, X_test, y_test, df)
+    #     plot_feature_importance(plots_folder, start, end, gbreg, X_test, y_test, df)
     
-    minutes_violin(start, end, df)
+    minutes_violin(plots_folder, start, end, df)
     
 #fig, (ax0, ax1) = plt.subplots(nrows=2, ncols=1, sharex=True)
 #sns.set(color_codes=True)
@@ -240,20 +250,20 @@ def duration_vs_departure(df, start='home', end='work', order=1, gbr=False, dtr=
 #plt.clf()
 
 # violinplot of minutes to work
-def minutes_violin(start, end, df):
+def minutes_violin(plots_folder, start, end, df):
     """Violin plots for minutes and departure time, both as a whole and by day of week"""
     ax = sns.violinplot(data=df, x='minutes_to_' + end)
-    plt.savefig(f'minutes_from_{start}_to_{end}_violinplot')
+    plt.savefig(f'{plots_folder}/minutes_from_{start}_to_{end}_violinplot')
     plt.clf()
 
     ax = sns.violinplot(data=df, x='minutes_to_' + end, y='day_of_week', order=['Mon', 'Tue', 'Wed', 'Thu', 'Fri'])
-    plt.savefig(f'minutes_from_{start}_to_{end}_by_day_violinplot')
+    plt.savefig(f'{plots_folder}/minutes_from_{start}_to_{end}_by_day_violinplot')
     plt.clf()
 
     ax = sns.violinplot(data=df, x=start + '_departure_time_hr')
-    plt.savefig(f'departure_time_from_{start}_to_{end}_violinplot')
+    plt.savefig(f'{plots_folder}/departure_time_from_{start}_to_{end}_violinplot')
     plt.clf()
 
     ax = sns.violinplot(data=df, x=start + '_departure_time_hr', y='day_of_week', order=['Mon', 'Tue', 'Wed', 'Thu', 'Fri'])
-    plt.savefig(f'departure_time_from_{start}_to_{end}_by_day_violinplot')
+    plt.savefig(f'{plots_folder}/departure_time_from_{start}_to_{end}_by_day_violinplot')
     plt.clf()
