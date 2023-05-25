@@ -16,32 +16,30 @@ def process_data(filename='commuting_data.csv'):
     df = pd.read_csv(filename)
 
     # store times as datetime types
-    df['home_departure_time'] = pd.to_datetime(df['date'] + ' ' + df['home_departure_time'], errors='coerce')
-    df['work_departure_time'] = pd.to_datetime(df['date'] + ' ' + df['work_departure_time'], errors='coerce')
-    df['work_arrival_time'] = pd.to_datetime(df['date'] + ' ' + df['work_arrival_time'], errors='coerce')
-    df['home_arrival_time'] = pd.to_datetime(df['date'] + ' ' + df['home_arrival_time'], errors='coerce')
-
-    # calculate commuting minutes and store these as new columns
-    df['minutes_to_work'] = (df['work_arrival_time'] - df['home_departure_time']).dt.total_seconds()/60
-    df['minutes_to_home'] = (df['home_arrival_time'] - df['work_departure_time']).dt.total_seconds()/60
+    for ts in ['home_departure_time', 'work_departure_time', 'work_arrival_time', 'home_arrival_time']:
+        if ts in df.columns:
+            df[ts] = pd.to_datetime(df['date'] + ' ' + df[ts], errors='coerce')
+    # df['home_departure_time'] = pd.to_datetime(df['date'] + ' ' + df['home_departure_time'], errors='coerce')
+    # df['work_departure_time'] = pd.to_datetime(df['date'] + ' ' + df['work_departure_time'], errors='coerce')
+    # df['work_arrival_time'] = pd.to_datetime(df['date'] + ' ' + df['work_arrival_time'], errors='coerce')
+    # df['home_arrival_time'] = pd.to_datetime(df['date'] + ' ' + df['home_arrival_time'], errors='coerce')
 
     # calculate minutes after midnight for departure and arrival times and store these as new columns
     midnight = datetime.time()
-    
-    #print(df['home_departure_time'])
 
-    #df['home_departure_time'] = datetime.datetime.strptime(df['home_departure_time'], '%H:%M')
-    df['home_departure_time_hr'] = (df['home_departure_time'] - pd.to_datetime(df['date'] + ' ' + str(midnight))).dt.total_seconds()/(60*60)
-    df['work_departure_time_hr'] = (df['work_departure_time'] - pd.to_datetime(df['date'] + ' ' + str(midnight))).dt.total_seconds()/(60*60)
-    #print(df['home_departure_time_hr'])
+    # Adding columns: calculate commuting minutes; remove the date info from departure time, preserving just the time info; calculate the mileage
+    if 'work_arrival_time' in df.columns:
+        df['minutes_to_work'] = (df['work_arrival_time'] - df['home_departure_time']).dt.total_seconds()/60
+        df['home_departure_time_hr'] = (df['home_departure_time'] - pd.to_datetime(df['date'] + ' ' + str(midnight))).dt.total_seconds()/(60*60)
+        df['mileage_to_work'] = df['work_arrival_mileage'] - df['home_departure_mileage']
+    if 'home_arrival_time' in df.columns:
+        df['minutes_to_home'] = (df['home_arrival_time'] - df['work_departure_time']).dt.total_seconds()/60
+        df['work_departure_time_hr'] = (df['work_departure_time'] - pd.to_datetime(df['date'] + ' ' + str(midnight))).dt.total_seconds()/(60*60)
+        df['mileage_to_home'] = df['home_arrival_mileage'] - df['work_departure_mileage']
 
     #print('Mean duration: {:.2f} minutes'.format(df['minutes_to_work'].mean()))
     #print('Median duration: {:.0f} minutes'.format(df['minutes_to_work'].median()))
     #print(df['home_departure_time'].dt.day_name())
-
-    #print(type(pd.iloc()))
-    df['mileage_to_work'] = df['work_arrival_mileage'] - df['home_departure_mileage']
-    df['mileage_to_home'] = df['home_arrival_mileage'] - df['work_departure_mileage']
 
     return df
 
