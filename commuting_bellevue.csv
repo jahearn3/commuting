@@ -1,2 +1,6 @@
 ﻿date,day_of_week,home_departure_time,home_departure_mileage,work_arrival_time,work_arrival_mileage,comments_from_home_to_work,work_departure_time,work_departure_mileage,home_arrival_time,home_arrival_mileage,comments_from_work_to_home
-5/16/2023,,,,,,,20:42,16047,21:45,16108,
+5/16/2023,Tue,,,,,,20:42,16047,21:45,16108,
+5/23/2023,Tue,,,,,,20:45,50602,21:50,50664,
+5/31/2023,Wed,5:41,50772,7:19,50836,,,,,,
+6/6/2023,Tue,6:14,51084,8:28,51148,,20:44,51151,21:49,51212,
+6/8/2023,Thu,6:08,51387,8:07,51450,,,,,,
