@@ -49,8 +49,24 @@ def preprocess_data(start, end, df):
     #print(df)
     df = pd.get_dummies(data=df, columns=['day_of_week'], drop_first=True)
     df_notna = df[df[start + '_departure_time_hr'].notna()]
-    X = df_notna[[start + '_departure_time_hr','day_of_week_Mon','day_of_week_Tue','day_of_week_Wed','day_of_week_Thu']]
-    #df = df.get_dummies(data=df, prefix=['Mon', 'Tue', 'Wed', 'Thu', 'Fri'], columns='day_of_week', drop_first=True)
+    # print(df_notna.columns)
+    # for col in df_notna.columns:
+    #     if((col[0] == 'd') and (col != 'date')):
+    #         print(col[:8])
+    #         print(col[:9])
+    #         print(col[:10])
+    #         print(col[:11])
+    #         print(col[:12])
+    features = [start + '_departure_time_hr']    
+    weekday_columns = []
+    for col in df_notna.columns:
+        if col[:11] == 'day_of_week':
+            weekday_columns.append(col) 
+    features.extend(weekday_columns)
+    print(weekday_columns)
+    X = df_notna[features]
+    # X = df_notna[[start + '_departure_time_hr','day_of_week_Mon','day_of_week_Tue','day_of_week_Wed','day_of_week_Thu']]
+    # df = df.get_dummies(data=df, prefix=['Mon', 'Tue', 'Wed', 'Thu', 'Fri'], columns='day_of_week', drop_first=True)
     #X = np.array(df[start + '_departure_time_hr'].dropna()).reshape(-1, 1)
     #X = np.array(df_notna[start + '_departure_time_hr']).reshape(-1, 1)
     #X = np.array([df_notna[start + '_departure_time_hr'], df_notna['day_of_week_Mon'], df_notna['day_of_week_Tue'], df_notna['day_of_week_Wed'], df_notna['day_of_week_Thu']])

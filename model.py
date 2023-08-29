@@ -226,15 +226,15 @@ def fit_rfr_with_grid_search(X_train, X_test, y_train, y_test):
 
     return best_rf, best_score, best_params
 
-def fit_nn(X_train, X_test, y_train, y_test):
-    nn = Sequential()
-    nn.add(Dense(5, kernel_initializer='normal', activation='relu', input_dim=X_train.shape[1]))
-    nn.add(Dense(5, kernel_initializer='normal', activation='tanh'))
-    nn.add(Dense(1, kernel_initializer='normal'))
-    nn.compile(loss='mean_squared_error', optimizer='adam')
-    nn_fit = nn.fit(X_train, y_train, batch_size=int(X_train.shape[0]), epochs=3)
-    mse = compute_mse(nn, 'NN', X_train, X_test, y_train, y_test)
-    return nn, mse
+# def fit_nn(X_train, X_test, y_train, y_test):
+#     nn = Sequential()
+#     nn.add(Dense(5, kernel_initializer='normal', activation='relu', input_dim=X_train.shape[1]))
+#     nn.add(Dense(5, kernel_initializer='normal', activation='tanh'))
+#     nn.add(Dense(1, kernel_initializer='normal'))
+#     nn.compile(loss='mean_squared_error', optimizer='adam')
+#     nn_fit = nn.fit(X_train, y_train, batch_size=int(X_train.shape[0]), epochs=3)
+#     mse = compute_mse(nn, 'NN', X_train, X_test, y_train, y_test)
+#     return nn, mse
 
 def fit_ensemble(X_train, X_test, y_train, y_test, estimators):
     # This ensemble approach uses the VotingRegressor method
@@ -256,9 +256,19 @@ def prediction(reg, df, start):
     # print(df['day_of_week_Wed'].sum())
     # print(df['day_of_week_Thu'].sum())
     # assign day_of_week: one line for Mondays, one line for Tuesdays, one line for Thursdays
-    mondays  = np.transpose(np.array([t, np.ones(num) , np.zeros(num), np.zeros(num), np.zeros(num)]))
-    tuesdays = np.transpose(np.array([t, np.zeros(num), np.ones(num) , np.zeros(num), np.zeros(num)]))
-    thursdays = np.transpose(np.array([t, np.zeros(num), np.zeros(num) , np.zeros(num), np.ones(num)]))
+    print(df.columns)
+    count = 0
+    for col in df.columns:
+        if(col[:4] == 'day_'):
+            count += 1
+    if(count == 4): # Data includes entries from each of the 5 weekdays
+        mondays  = np.transpose(np.array([t, np.ones(num) , np.zeros(num), np.zeros(num), np.zeros(num)]))
+        tuesdays = np.transpose(np.array([t, np.zeros(num), np.ones(num) , np.zeros(num), np.zeros(num)]))
+        thursdays = np.transpose(np.array([t, np.zeros(num), np.zeros(num) , np.zeros(num), np.ones(num)]))
+    elif(count == 3): # e.g. No Fridays in the data set
+        mondays  = np.transpose(np.array([t, np.ones(num) , np.zeros(num), np.zeros(num)]))
+        tuesdays = np.transpose(np.array([t, np.zeros(num), np.ones(num) , np.zeros(num)]))
+        thursdays = np.transpose(np.array([t, np.zeros(num), np.zeros(num) , np.ones(num)]))
     mon_line = reg.predict(mondays)
     tue_line = reg.predict(tuesdays)
     thu_line = reg.predict(thursdays)
