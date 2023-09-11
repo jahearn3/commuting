@@ -267,3 +267,83 @@ def minutes_violin(plots_folder, start, end, df):
     ax = sns.violinplot(data=df, x=start + '_departure_time_hr', y='day_of_week', order=['Mon', 'Tue', 'Wed', 'Thu', 'Fri'])
     plt.savefig(f'{plots_folder}/departure_time_from_{start}_to_{end}_by_day_violinplot')
     plt.clf()
+
+def driving_and_waiting_vs_departure(filename, df, start='home', launch_port='southworth', land_port='fauntleroy', end='work', gbr=False, dtr=False, rfr=False, nn=False, xgb=False, ensemble_r=False):
+    fig = plt.figure()
+    # Apply the default theme
+    sns.set_theme()
+
+    if(end == 'home'):
+        launch_port = 'fauntleroy'
+        land_port = 'southworth'
+
+    # print(df[[start + '_departure_time', 'park_in_line_' + launch_port]].head())
+
+    first_leg = (df['park_in_line_' + launch_port] - df[start + '_departure_time']).dt.total_seconds()/60
+    second_leg = (df[end + '_arrival_time'] - df[land_port + '_ferry_departure_time']).dt.total_seconds()/60
+    df['driving_time'] = first_leg + second_leg
+    df['waiting_time'] = df['minutes_to_' + end] - df['driving_time']
+    df['driving_to_waiting_ratio'] = df['driving_time'] / df['waiting_time']
+
+    # print(df[[start + '_departure_time_hr', 'driving_time', 'waiting_time', 'driving_to_waiting_ratio']].head())
+
+    # Initialize the visualization
+    #ax = sns.regplot(data=df, x=start + '_departure_time_hr', y='minutes_to_' + end, scatter=False, ci=None, color='r', order=order)#, scatter_kws={'s':1}) # to get the linear trendline
+    ax = sns.scatterplot(data=df, x=start + '_departure_time_hr', y='driving_time', hue='day_of_week', hue_order=['Mon', 'Tue', 'Thu'], s=1)
+    
+    # Highlight the most recent trip by putting a yellow halo around it
+    x_latest = df[start + '_departure_time_hr'][df.index[-1]]
+    y_latest = df['driving_time'][df.index[-1]]
+    ax.scatter(x_latest, y_latest, c='#FFFF14', s=100)
+    
+    # Add size of scatter points by mileage, but don't add mileage to the legend
+    ax = sns.scatterplot(data=df, x=start + '_departure_time_hr', y='driving_time', hue='day_of_week', hue_order=['Mon', 'Tue', 'Thu'], size='mileage_to_' + end, legend=False) # to plot the scatter points colored by day of the week
+    
+    ax = time_xticks(ax, df[start + '_departure_time_hr'].min(), df[start + '_departure_time_hr'].max())
+
+    ax.legend(loc=0, fontsize=10)
+
+    # Specfiy axis labels
+    ax.set(xlabel=start.capitalize() + ' Departure Time',
+       ylabel='Minutes Driving to ' + end.capitalize(),
+       title='Ferry Route Driving Time')
+    
+    # Make directory for plots if it doesn't already exist
+    pattern = r'_(.*)\.csv'
+    match = re.search(pattern, filename)
+    if(match):
+        dataset = match.group(1)
+    else:
+        dataset = 'tenino'
+        print('Filename or dataset not recognized.')
+    plots_folder = f'plots_{dataset}' 
+    if not os.path.exists(plots_folder):
+        os.makedirs(plots_folder)
+
+    # Save the plot 
+    plt.savefig(f'{plots_folder}/driving_time_vs_departure_from_{start}_to_{end}.png')
+    plt.clf()
+
+    # Waiting time plot
+    ax = sns.scatterplot(data=df, x=start + '_departure_time_hr', y='waiting_time', hue='day_of_week', hue_order=['Mon', 'Tue', 'Thu'], s=1)
+    y_latest = df['waiting_time'][df.index[-1]]
+    ax.scatter(x_latest, y_latest, c='#FFFF14', s=100)
+    ax = sns.scatterplot(data=df, x=start + '_departure_time_hr', y='waiting_time', hue='day_of_week', hue_order=['Mon', 'Tue', 'Thu'], size='mileage_to_' + end, legend=False) # to plot the scatter points colored by day of the week
+    ax = time_xticks(ax, df[start + '_departure_time_hr'].min(), df[start + '_departure_time_hr'].max())
+    ax.legend(loc=0, fontsize=10)
+    ax.set(xlabel=start.capitalize() + ' Departure Time',
+       ylabel='Minutes Waiting on route to ' + end.capitalize(),
+       title='Ferry Route Waiting Time')
+    plt.savefig(f'{plots_folder}/waiting_time_vs_departure_from_{start}_to_{end}.png')
+    plt.clf()
+
+    # Ratio plot
+    ax = sns.scatterplot(data=df, x=start + '_departure_time', y='driving_to_waiting_ratio', hue='day_of_week', hue_order=['Mon', 'Tue', 'Thu'], s=1)
+    ax = sns.scatterplot(data=df, x=start + '_departure_time', y='driving_to_waiting_ratio', hue='day_of_week', hue_order=['Mon', 'Tue', 'Thu'], size='mileage_to_' + end, legend=False) 
+    ax.legend(loc=0, fontsize=10)
+    ax.set(xlabel=start.capitalize() + ' Departure Time and Date',
+       ylabel='Driving to Waiting Ratio on route to ' + end.capitalize(),
+       title='Ferry Route Driving to Waiting Ratio')
+    plt.xticks(rotation=25) #TODO: Make these tick labels look good
+    plt.savefig(f'{plots_folder}/driving_waiting_ratio_vs_departure_from_{start}_to_{end}.png')
+    plt.clf()

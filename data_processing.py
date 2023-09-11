@@ -15,8 +15,13 @@ def process_data(filename='commuting_data.csv'):
 
     df = pd.read_csv(filename)
 
+    if('ferry' in filename):
+        time_columns = ['home_departure_time', 'work_departure_time', 'work_arrival_time', 'home_arrival_time', 'park_in_line_southworth', 'park_on_southworth_ferry_time', 'southworth_ferry_launch_time', 'fauntleroy_ferry_departure_time']
+    else:
+        time_columns = ['home_departure_time', 'work_departure_time', 'work_arrival_time', 'home_arrival_time']
+
     # store times as datetime types
-    for ts in ['home_departure_time', 'work_departure_time', 'work_arrival_time', 'home_arrival_time']:
+    for ts in time_columns:
         if ts in df.columns:
             df[ts] = pd.to_datetime(df['date'] + ' ' + df[ts], errors='coerce')
     # df['home_departure_time'] = pd.to_datetime(df['date'] + ' ' + df['home_departure_time'], errors='coerce')

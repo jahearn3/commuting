@@ -257,10 +257,11 @@ def prediction(reg, df, start):
     # print(df['day_of_week_Thu'].sum())
     # assign day_of_week: one line for Mondays, one line for Tuesdays, one line for Thursdays
     print(df.columns)
-    count = 0
-    for col in df.columns:
-        if(col[:4] == 'day_'):
-            count += 1
+    # count = 0
+    # for col in df.columns:
+    #     if(col[:4] == 'day_'):
+    #         count += 1
+    count = sum(1 for col in df.columns if col[:4] == 'day_')
     if(count == 4): # Data includes entries from each of the 5 weekdays
         mondays  = np.transpose(np.array([t, np.ones(num) , np.zeros(num), np.zeros(num), np.zeros(num)]))
         tuesdays = np.transpose(np.array([t, np.zeros(num), np.ones(num) , np.zeros(num), np.zeros(num)]))
@@ -269,6 +270,10 @@ def prediction(reg, df, start):
         mondays  = np.transpose(np.array([t, np.ones(num) , np.zeros(num), np.zeros(num)]))
         tuesdays = np.transpose(np.array([t, np.zeros(num), np.ones(num) , np.zeros(num)]))
         thursdays = np.transpose(np.array([t, np.zeros(num), np.zeros(num) , np.ones(num)]))
+    elif(count == 2): # e.g. No Fridays in the data set
+        mondays  = np.transpose(np.array([t, np.ones(num) , np.zeros(num)]))
+        tuesdays = np.transpose(np.array([t, np.zeros(num), np.ones(num)]))
+        thursdays = np.transpose(np.array([t, np.zeros(num), np.zeros(num)]))
     mon_line = reg.predict(mondays)
     tue_line = reg.predict(tuesdays)
     thu_line = reg.predict(thursdays)
