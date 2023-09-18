@@ -338,12 +338,27 @@ def driving_and_waiting_vs_departure(filename, df, start='home', launch_port='so
     plt.clf()
 
     # Ratio plot
+    # Convert dates to a new format - MM-DD
+    # df[start + '_departure_time'] = [d.strftime('%m-%d') for d in df[start + '_departure_time']]
+    #TODO: x axis points are not spaced correctly
     ax = sns.scatterplot(data=df, x=start + '_departure_time', y='driving_to_waiting_ratio', hue='day_of_week', hue_order=['Mon', 'Tue', 'Thu'], s=1)
     ax = sns.scatterplot(data=df, x=start + '_departure_time', y='driving_to_waiting_ratio', hue='day_of_week', hue_order=['Mon', 'Tue', 'Thu'], size='mileage_to_' + end, legend=False) 
+    
+    # Rotate and align the tick labels so they look better
+    fig.autofmt_xdate()
+
+    # Add text to make understanding the ratio more intuitive
+    earliest = df[start + '_departure_time'].min()
+    latest = df[start + '_departure_time'].max()
+
+    median_date = earliest + ((latest - earliest) / 3.14)
+    ax.text(median_date, df['driving_to_waiting_ratio'].max() - 0.1, 'More Driving', c='b')
+    ax.text(median_date, df['driving_to_waiting_ratio'].min() + 0.1, 'More Waiting', c='b')
+
     ax.legend(loc=0, fontsize=10)
     ax.set(xlabel=start.capitalize() + ' Departure Time and Date',
        ylabel='Driving to Waiting Ratio on route to ' + end.capitalize(),
        title='Ferry Route Driving to Waiting Ratio')
-    plt.xticks(rotation=25) #TODO: Make these tick labels look good
+    plt.xticks(rotation=35) 
     plt.savefig(f'{plots_folder}/driving_waiting_ratio_vs_departure_from_{start}_to_{end}.png')
     plt.clf()
