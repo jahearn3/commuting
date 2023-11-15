@@ -189,7 +189,8 @@ def duration_vs_departure(filename, df, start='home', end='work', gbr=False, dtr
         ax.plot(x, y, c='chartreuse', label='Ensemble')
 
     if(gbr or dtr or rfr or nn or xgb):
-        ax.legend(loc=1, fontsize=10)
+        # ax.legend(loc=1, fontsize=10)
+        plt.legend(bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0.)
 
     # Specfiy axis labels
     ax.set(xlabel=start.capitalize() + ' Departure Time',
@@ -209,7 +210,7 @@ def duration_vs_departure(filename, df, start='home', end='work', gbr=False, dtr
         os.makedirs(plots_folder)
 
     # Save the plot 
-    plt.savefig(f'{plots_folder}/duration_vs_departure_from_{start}_to_{end}.png')
+    plt.savefig(f'{plots_folder}/duration_vs_departure_from_{start}_to_{end}.png', bbox_inches='tight')
     plt.clf()
 
     # Plot the residuals 
@@ -301,7 +302,9 @@ def driving_and_waiting_vs_departure(filename, df, start='home', launch_port='so
     
     ax = time_xticks(ax, df[start + '_departure_time_hr'].min(), df[start + '_departure_time_hr'].max())
 
-    ax.legend(loc=0, fontsize=10)
+    # ax.legend(fontsize=8)
+    # sns.move_legend(ax, "upper left", bbox_to_anchor=(1, 1))
+    ax.legend(bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0.)
 
     # Specfiy axis labels
     ax.set(xlabel=start.capitalize() + ' Departure Time',
@@ -321,7 +324,7 @@ def driving_and_waiting_vs_departure(filename, df, start='home', launch_port='so
         os.makedirs(plots_folder)
 
     # Save the plot 
-    plt.savefig(f'{plots_folder}/driving_time_vs_departure_from_{start}_to_{end}.png')
+    plt.savefig(f'{plots_folder}/driving_time_vs_departure_from_{start}_to_{end}.png', bbox_inches='tight')
     plt.clf()
 
     # Waiting time plot
