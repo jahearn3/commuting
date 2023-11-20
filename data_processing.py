@@ -68,8 +68,18 @@ def preprocess_data(start, end, df):
         if col[:11] == 'day_of_week':
             weekday_columns.append(col) 
     features.extend(weekday_columns)
-    print(weekday_columns)
-    X = df_notna[features]
+    
+    # Filter out outliers
+    print(f'min: {df_notna["minutes_to_" + end].min()}')
+    print(f'max: {df_notna["minutes_to_" + end].max()}')
+    print(f'mean: {df_notna["minutes_to_" + end].mean()}')
+    print(f'3 * std: {3 * df_notna["minutes_to_" + end].std()}')
+    df_ready = df_notna[np.abs(df_notna["minutes_to_" + end] - df_notna["minutes_to_" + end].mean()) <= (3 * df_notna["minutes_to_" + end].std())]
+    df_filtered_out = df_notna[~(np.abs(df_notna["minutes_to_" + end] - df_notna["minutes_to_" + end].mean()) <= (3 * df_notna["minutes_to_" + end].std()))]
+    print('Filtered out:')
+    print(df_filtered_out[['date', 'minutes_to_' + end]])
+
+    X = df_ready[features]
     # X = df_notna[[start + '_departure_time_hr','day_of_week_Mon','day_of_week_Tue','day_of_week_Wed','day_of_week_Thu']]
     # df = df.get_dummies(data=df, prefix=['Mon', 'Tue', 'Wed', 'Thu', 'Fri'], columns='day_of_week', drop_first=True)
     #X = np.array(df[start + '_departure_time_hr'].dropna()).reshape(-1, 1)
@@ -78,7 +88,7 @@ def preprocess_data(start, end, df):
     #print(X.shape)
     #X = np.array([df[start + '_departure_time_hr'], df['day_of_week_Mon'], df['day_of_week_Tue'], df['day_of_week_Wed'], df['day_of_week_Thu']])
     #y = np.array(df['minutes_to_' + end].dropna())
-    y = np.array(df_notna['minutes_to_' + end])
+    y = np.array(df_ready['minutes_to_' + end])
     #(len1, len2) = X.shape
     #X = np.reshape(X, (len2, len1))
     #print(y)
