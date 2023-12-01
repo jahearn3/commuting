@@ -93,8 +93,12 @@ def duration_vs_departure(filename, df, start='home', end='work', gbr=False, dtr
     ax = sns.scatterplot(data=df, x=start + '_departure_time_hr', y='minutes_to_' + end, hue='day_of_week', hue_order=['Mon', 'Tue', 'Wed', 'Thu', 'Fri'], s=1)
     
     # Highlight the most recent trip by putting a yellow halo around it
-    x_latest = df[start + '_departure_time_hr'][df.index[-1]]
-    y_latest = df['minutes_to_' + end][df.index[-1]]
+    df_subset = df[[start + '_departure_time_hr', 'minutes_to_' + end]]
+    df_subset = df_subset.dropna()
+    x_latest = df_subset[start + '_departure_time_hr'][df_subset.index[-1]]
+    y_latest = df_subset['minutes_to_' + end][df_subset.index[-1]]
+    # x_latest = df[start + '_departure_time_hr'][df.index[-1]]
+    # y_latest = df['minutes_to_' + end][df.index[-1]]
     ax.scatter(x_latest, y_latest, c='#FFFF14', s=100)
     
     # Add comments near points
