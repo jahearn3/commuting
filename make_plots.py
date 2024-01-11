@@ -83,7 +83,7 @@ def time_xticks(ax, earliest_departure, latest_departure):
     #ax.set_xlim(np.fmin(earliest_departure, ticks_loc[0]) - 0.1, np.fmax(latest_departure, ticks_loc[-1]) + 0.1)
     return ax
 
-def duration_vs_departure(filename, df, start='home', end='work', gbr=False, dtr=False, rfr=False, nn=False, xgb=False, ensemble_r=False):
+def duration_vs_departure(filename, df, start='home', end='work', gbr=False, dtr=False, rfr=False, nn=False, xgb=False, ensemble_r=False, comments=False):
     fig = plt.figure()
     # Apply the default theme
     sns.set_theme()
@@ -102,14 +102,15 @@ def duration_vs_departure(filename, df, start='home', end='work', gbr=False, dtr
     ax.scatter(x_latest, y_latest, c='#FFFF14', s=100)
     
     # Add comments near points
-    for i, row in df.iterrows():
-        try:
-            chars = len(str(row['comments_from_' + start + '_to_' + end]))
-            if(chars > 5):
-                wrapped_text = textwrap.fill(str(row['comments_from_' + start + '_to_' + end]), 25)
-                ax.text(row[start + '_departure_time_hr'], row['minutes_to_' + end], wrapped_text, fontsize=6)
-        except KeyError:
-            print('Key Error. Skipping the labeling of points.')
+    if(comments):
+        for i, row in df.iterrows():
+            try:
+                chars = len(str(row['comments_from_' + start + '_to_' + end]))
+                if(chars > 5):
+                    wrapped_text = textwrap.fill(str(row['comments_from_' + start + '_to_' + end]), 25)
+                    ax.text(row[start + '_departure_time_hr'], row['minutes_to_' + end], wrapped_text, fontsize=6)
+            except KeyError:
+                print('Key Error. Skipping the labeling of points.')
 
     # Add size of scatter points by mileage, but don't add mileage to the legend
     ax = sns.scatterplot(data=df, x=start + '_departure_time_hr', y='minutes_to_' + end, hue='day_of_week', hue_order=['Mon', 'Tue', 'Wed', 'Thu', 'Fri'], size='mileage_to_' + end, legend=False) # to plot the scatter points colored by day of the week

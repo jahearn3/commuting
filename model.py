@@ -245,11 +245,14 @@ def fit_ensemble(X_train, X_test, y_train, y_test, estimators):
 
 def prediction(reg, df, start):
 # def prediction_from_gbr(reg, df, start):
+    # Hybrid between linear spacing and Gaussian spacing for time distribution
     num = int(np.sqrt(df[start + '_departure_time_hr'].notnull().sum())) + 1
-    #print('Earliest departure: ' + str(df[start + '_departure_time_hr'].min()))
-    #print('Latest departure: ' + str(df[start + '_departure_time_hr'].max()))
-    t = np.linspace(df[start + '_departure_time_hr'].min(), df[start + '_departure_time_hr'].max(), num) # assign time 
-    # future: count day_of_week weights and weight the days according to the count 
+    t_lin = np.linspace(df[start + '_departure_time_hr'].min(), df[start + '_departure_time_hr'].max(), num) # linear time spacing component 
+    t_gau = np.random.normal(df[start + '_departure_time_hr'].mean(), df[start + '_departure_time_hr'].std(), num) # Gaussian time spacing component
+    t = np.concatenate((t_lin, t_gau)) # Combine the two time spacing components
+    t.sort()
+    num = len(t)
+    # TODO: count day_of_week weights and weight the days according to the count 
     df = pd.get_dummies(data=df, columns=['day_of_week'], drop_first=True)
     # print(df['day_of_week_Mon'].sum())
     # print(df['day_of_week_Tue'].sum())
