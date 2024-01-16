@@ -246,10 +246,30 @@ def fit_ensemble(X_train, X_test, y_train, y_test, estimators):
 def prediction(reg, df, start):
 # def prediction_from_gbr(reg, df, start):
     # Hybrid between linear spacing and Gaussian spacing for time distribution
-    num = int(np.sqrt(df[start + '_departure_time_hr'].notnull().sum())) + 1
-    t_lin = np.linspace(df[start + '_departure_time_hr'].min(), df[start + '_departure_time_hr'].max(), num) # linear time spacing component 
-    t_gau = np.random.normal(df[start + '_departure_time_hr'].mean(), df[start + '_departure_time_hr'].std(), num) # Gaussian time spacing component
-    t = np.concatenate((t_lin, t_gau)) # Combine the two time spacing components
+    # num = int(np.sqrt(df[start + '_departure_time_hr'].notnull().sum())) + 1
+    # t_lin = np.linspace(df[start + '_departure_time_hr'].min(), df[start + '_departure_time_hr'].max(), num) # linear time spacing component 
+    # t_gau = np.random.normal(df[start + '_departure_time_hr'].mean(), df[start + '_departure_time_hr'].std(), num) # Gaussian time spacing component
+    # t = np.concatenate((t_lin, t_gau)) # Combine the two time spacing components
+    # t.sort()
+    # More controlled approach: exponential spacing
+    t = []
+    # mean = mu
+    mu = df[start + '_departure_time_hr'].mean()
+    t.append(mu)
+    sigma = df[start + '_departure_time_hr'].std()
+    # Factors for exponential spacing outward from the mean 
+    factors = np.power(np.linspace(0, 1, 9), 2)
+    fac = factors[1:5] * 10
+    for f in fac:
+        t.append(mu + (f * sigma))
+        t.append(mu - (f * sigma))
+    # min and max or +-3sigma, whichever is tighter
+    # t_min = df[start + '_departure_time_hr'].min()
+    # t_max = df[start + '_departure_time_hr'].max()
+    # t_3sn = mu - (3 * sigma)
+    # t_3sx = mu + (3 * sigma)
+    # t.append(min(t_max, t_3sx))
+    # t.append(max(t_min, t_3sn))
     t.sort()
     num = len(t)
     # TODO: count day_of_week weights and weight the days according to the count 
