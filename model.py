@@ -15,10 +15,12 @@ import warnings
 
 warnings.filterwarnings(action='ignore', category=UserWarning)
 
+
 def linear_prediction_line(df, start): # runs but does not behave as expected 
     x = np.linspace(np.amin(df[start + '_departure_time_hr']), np.amax(df[start + '_departure_time_hr']), len(df[start + '_departure_time_hr']))
     m, c = np.linalg.lstsq(np.vstack([x, np.ones(len(x))]).T, df['minutes_to_work'], rcond=None)[0]
     return x, m*x + c
+
 
 def nonlinear_prediction_line(df, start, end):
     x = np.linspace(np.amin(df[start + '_departure_time_hr']), np.amax(df[start + '_departure_time_hr']), len(df[start + '_departure_time_hr']))
@@ -29,6 +31,7 @@ def nonlinear_prediction_line(df, start, end):
     # print(coeffs)
     return x, coeffs[0] * x + coeffs[1] * x + coeffs[2]
 
+
 def linear_prediction_from_statsmodels(df, start, end, num=20):
     mdl_duration_vs_departure = ols('minutes_to_' + end + ' ~ ' + start + '_departure_time_hr', data=df).fit() # Create the model object and fit the model
     #print(mdl_duration_vs_departure.params) # Print the parameters of the fitted model
@@ -37,8 +40,10 @@ def linear_prediction_from_statsmodels(df, start, end, num=20):
     y = coeffs[0] + (coeffs[1] * x)
     return x, y
 
+
 def compare(df, start, end):
     print('correlation: ' + str(df[start + '_departure_time_hr'].corr(df['minutes_to_' + end])))
+
 
 def compute_mse(reg, abbreviation, X_train, X_test, y_train, y_test):
     '''Computes the mean squared error for training, test, and complete datasets'''
@@ -50,12 +55,14 @@ def compute_mse(reg, abbreviation, X_train, X_test, y_train, y_test):
         print(f'{abbreviation} mean squared error (MSE) on {label} set: {mse}')
     return mse
 
+
 def fit_dtr(X_train, X_test, y_train, y_test):
     seed = 3
     dt = DecisionTreeRegressor(max_depth=8, random_state=seed)
     dt.fit(X_train, y_train)
     mse = compute_mse(dt, 'DTR', X_train, X_test, y_train, y_test)
     return dt, mse
+
 
 def fit_dtr_with_grid_search(X_train, X_test, y_train, y_test):
     X = pd.concat([X_train, X_test], axis=0)
@@ -75,6 +82,7 @@ def fit_dtr_with_grid_search(X_train, X_test, y_train, y_test):
 
     return best_dt, best_score, best_params
 
+
 def fit_gbr(X_train, X_test, y_train, y_test):
     params = {
         "n_estimators": 500,
@@ -93,7 +101,8 @@ def fit_gbr(X_train, X_test, y_train, y_test):
     #  500, 2,  3, 0.01 -> 270 @ 500
 
     reg = GradientBoostingRegressor(**params)
-    reg_fit = reg.fit(X_train, y_train)
+    reg.fit(X_train, y_train)
+    # reg_fit = reg.fit(X_train, y_train)
     mse = compute_mse(reg, 'GBR', X_train, X_test, y_train, y_test)
 
     # reg_scores = cross_val_score(reg_fit, X_train, y_train, cv = 5)
@@ -119,6 +128,7 @@ def fit_gbr(X_train, X_test, y_train, y_test):
 
     return reg, mse, params 
 
+
 def fit_gbr_with_grid_search(X_train, X_test, y_train, y_test):
     X = pd.concat([X_train, X_test], axis=0)
     y = np.concatenate((y_train, y_test), axis=0)
@@ -137,6 +147,7 @@ def fit_gbr_with_grid_search(X_train, X_test, y_train, y_test):
 
     return best_gbm, best_score, best_params
 
+
 def fit_xgbr(X_train, X_test, y_train, y_test):
     # params = {
     #     "n_estimators": 500,
@@ -151,6 +162,7 @@ def fit_xgbr(X_train, X_test, y_train, y_test):
     reg.fit(X_train, y_train)
     mse = compute_mse(reg, 'XGBR', X_train, X_test, y_train, y_test)
     return reg, mse
+
 
 def fit_xgbr_with_grid_search(X_train, X_test, y_train, y_test):
     X = pd.concat([X_train, X_test], axis=0)
@@ -169,6 +181,7 @@ def fit_xgbr_with_grid_search(X_train, X_test, y_train, y_test):
     best_xgbm.fit(X_train, y_train)
 
     return best_xgbm, best_score, best_params
+
 
 def fit_rfr(X_train, X_test, y_train, y_test):
     # These params were determined the best through the below GridSearchCV
@@ -205,7 +218,8 @@ def fit_rfr(X_train, X_test, y_train, y_test):
     # Best params: 
     # {'max_depth': 3, 'max_features': 'sqrt', 'n_estimators': 200, 'random_state': 18}
 
-    return rf, mse 
+    return rf, mse
+
 
 def fit_rfr_with_grid_search(X_train, X_test, y_train, y_test):
     X = pd.concat([X_train, X_test], axis=0)
@@ -236,6 +250,7 @@ def fit_rfr_with_grid_search(X_train, X_test, y_train, y_test):
 #     mse = compute_mse(nn, 'NN', X_train, X_test, y_train, y_test)
 #     return nn, mse
 
+
 def fit_ensemble(X_train, X_test, y_train, y_test, estimators):
     # This ensemble approach uses the VotingRegressor method
     reg = VotingRegressor(estimators=estimators)
@@ -243,14 +258,18 @@ def fit_ensemble(X_train, X_test, y_train, y_test, estimators):
     mse = compute_mse(reg, 'Ensemble', X_train, X_test, y_train, y_test)
     return reg, mse
 
-def prediction(reg, df, start):
-# def prediction_from_gbr(reg, df, start):
+
+def hybrid_spacing(df, start):
     # Hybrid between linear spacing and Gaussian spacing for time distribution
-    # num = int(np.sqrt(df[start + '_departure_time_hr'].notnull().sum())) + 1
-    # t_lin = np.linspace(df[start + '_departure_time_hr'].min(), df[start + '_departure_time_hr'].max(), num) # linear time spacing component 
-    # t_gau = np.random.normal(df[start + '_departure_time_hr'].mean(), df[start + '_departure_time_hr'].std(), num) # Gaussian time spacing component
-    # t = np.concatenate((t_lin, t_gau)) # Combine the two time spacing components
-    # t.sort()
+    num = int(np.sqrt(df[start + '_departure_time_hr'].notnull().sum())) + 1
+    t_lin = np.linspace(df[start + '_departure_time_hr'].min(), df[start + '_departure_time_hr'].max(), num) # linear time spacing component 
+    t_gau = np.random.normal(df[start + '_departure_time_hr'].mean(), df[start + '_departure_time_hr'].std(), num) # Gaussian time spacing component
+    t = np.concatenate((t_lin, t_gau)) # Combine the two time spacing components
+    t.sort()
+    return t, num
+
+
+def exponential_spacing(df, start):
     # More controlled approach: exponential spacing
     t = []
     # mean = mu
@@ -271,15 +290,51 @@ def prediction(reg, df, start):
     # t.append(min(t_max, t_3sx))
     # t.append(max(t_min, t_3sn))
     t.sort()
+    # print('Exponential method:')
+    # print(t)
     num = len(t)
+    return t, num
+
+
+def adaptive_spacing(df, start):
+    # More points where data is clustered
+    t = [df[start + '_departure_time_hr'].min(), df[start + '_departure_time_hr'].max()]
+    times_sorted = list(df[start + '_departure_time_hr'].dropna())
+    times_sorted.sort()
+    step_size = 7
+    for i in range(0, len(times_sorted) - step_size + 1, step_size):
+        # Take a slice
+        t_slice = times_sorted[i:i+step_size]
+        # Append the average
+        t.append(np.mean(t_slice))
+    t.sort()
+    # print('Adaptive method:')
+    # print(t)
+    num = len(t)
+    return t, num
+
+
+def prediction(reg, df, start):
+    t, num = adaptive_spacing(df, start)
+    # t, num = exponential_spacing(df, start)
     # TODO: count day_of_week weights and weight the days according to the count 
     df = pd.get_dummies(data=df, columns=['day_of_week'], drop_first=True)
     # print(df['day_of_week_Mon'].sum())
     # print(df['day_of_week_Tue'].sum())
     # print(df['day_of_week_Wed'].sum())
     # print(df['day_of_week_Thu'].sum())
+    # wdays = []
+    # wday_wt = []
+    weekday_weights = {}
+    for col in df.columns:
+        if col[:4] == 'day_':
+            # wdays.append(col[-3:])
+            # wday_wt.append(df[col].sum())
+            weekday_weights[col[-3:]] = df[col].sum()
+
+    # print(weekday_weights)
     # assign day_of_week: one line for Mondays, one line for Tuesdays, one line for Thursdays
-    print(df.columns)
+    # print(df.columns)
     # count = 0
     # for col in df.columns:
     #     if(col[:4] == 'day_'):
@@ -303,4 +358,35 @@ def prediction(reg, df, start):
     x = (mondays + tuesdays + thursdays)/3
     x_t = x.T 
     y = (mon_line + tue_line + thu_line)/3
-    return x_t[0], y
+
+    #TODO Working on this
+    weekdays = []
+    weekday_lines = []
+    for i in range(count):
+        cols = [t]
+        for j in range(count):
+            if i == j:
+                cols.append(np.ones(num))
+            else:
+                cols.append(np.zeros(num))
+        new_line = np.transpose(np.array(cols))
+        weekdays.append(new_line)
+        weekday_lines.append(reg.predict(new_line))
+    # x = weekdays[0]
+    # y = weekday_lines[0]
+    # for i in range(len(weekdays)):
+    #     x += weekdays[i]
+    #     y += weekday_lines[i]
+    # x /= len(weekdays)
+    x1 = sum(weekdays[i] for i in range(len(weekdays))) / len(weekdays)
+    x_t1 = x1.T
+    # y /= len(weekdays)
+    y1 = sum(weekday_lines[i] for i in range(len(weekday_lines))) / len(weekday_lines)
+
+    # print(f"x_t[0]: {x_t[0]}")
+    # print(f"x_t1[0]: {x_t1[0]}")
+    # # assert x_t[0] == x_t1[0]
+    # print(f"y: {y}")
+    # print(f"y1: {y1}")
+
+    return x_t1[0], y1
