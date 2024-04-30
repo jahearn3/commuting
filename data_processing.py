@@ -15,7 +15,7 @@ def process_data(filename='commuting_data.csv'):
 
     df = pd.read_csv(filename)
 
-    if('ferry' in filename):
+    if 'ferry' in filename:
         time_columns = ['home_departure_time', 'work_departure_time', 'work_arrival_time', 'home_arrival_time', 'park_in_line_southworth', 'park_on_southworth_ferry_time', 'southworth_ferry_launch_time', 'fauntleroy_ferry_departure_time']
     else:
         time_columns = ['home_departure_time', 'work_departure_time', 'work_arrival_time', 'home_arrival_time']
@@ -46,6 +46,11 @@ def process_data(filename='commuting_data.csv'):
     #print('Median duration: {:.0f} minutes'.format(df['minutes_to_work'].median()))
     #print(df['home_departure_time'].dt.day_name())
 
+    # Adding column for month to help explore seasonality in the data
+    df['date'] = pd.to_datetime(df['date'])
+    df['month'] = df['date'].dt.month
+    df['quarter'] = df['date'].dt.quarter
+
     return df
 
 #df = process_data()
@@ -53,6 +58,11 @@ def process_data(filename='commuting_data.csv'):
 def preprocess_data(start, end, df):
     #print(df)
     df = pd.get_dummies(data=df, columns=['day_of_week'], drop_first=True)
+    
+    # Cyclical encoding of month for seasonality
+    df['month_sin'] = np.sin(2 * np.pi * df['month'] / 12)
+    df['month_cos'] = np.cos(2 * np.pi * df['month'] / 12)
+    
     df_notna = df[df[start + '_departure_time_hr'].notna()]
     # print(df_notna.columns)
     # for col in df_notna.columns:
@@ -68,7 +78,8 @@ def preprocess_data(start, end, df):
         if col[:11] == 'day_of_week':
             weekday_columns.append(col) 
     features.extend(weekday_columns)
-    
+    features.extend(['quarter', 'month_sin', 'month_cos'])
+
     # Filter out outliers
     print(f'min: {df_notna["minutes_to_" + end].min()}')
     print(f'max: {df_notna["minutes_to_" + end].max()}')

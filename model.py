@@ -10,6 +10,7 @@ from sklearn.metrics import r2_score, make_scorer
 # from keras.models import Sequential
 # from keras.layers import Dense 
 from xgboost import XGBRegressor
+from datetime import datetime 
 
 import warnings
 
@@ -317,6 +318,10 @@ def adaptive_spacing(df, start):
 def prediction(reg, df, start):
     t, num = adaptive_spacing(df, start)
     # t, num = exponential_spacing(df, start)
+    # TODO: incorporate month into prediction
+    current_month = datetime.now().month
+    current_quarter = (current_month - 1) // 3 + 1
+
     # TODO: count day_of_week weights and weight the days according to the count 
     df = pd.get_dummies(data=df, columns=['day_of_week'], drop_first=True)
     # print(df['day_of_week_Mon'].sum())
@@ -341,17 +346,17 @@ def prediction(reg, df, start):
     #         count += 1
     count = sum(1 for col in df.columns if col[:4] == 'day_')
     if(count == 4): # Data includes entries from each of the 5 weekdays
-        mondays  = np.transpose(np.array([t, np.ones(num) , np.zeros(num), np.zeros(num), np.zeros(num)]))
-        tuesdays = np.transpose(np.array([t, np.zeros(num), np.ones(num) , np.zeros(num), np.zeros(num)]))
-        thursdays = np.transpose(np.array([t, np.zeros(num), np.zeros(num) , np.zeros(num), np.ones(num)]))
+        mondays  = np.transpose(np.array([t, np.ones(num), np.zeros(num), np.zeros(num), np.zeros(num), np.full((num, ), current_quarter), np.full((num, ), np.sin(current_month)), np.full((num, ), np.cos(current_month))]))
+        tuesdays = np.transpose(np.array([t, np.zeros(num), np.ones(num), np.zeros(num), np.zeros(num), np.full((num, ), current_quarter), np.full((num, ), np.sin(current_month)), np.full((num, ), np.cos(current_month))]))
+        thursdays = np.transpose(np.array([t, np.zeros(num), np.zeros(num), np.zeros(num), np.ones(num), np.full((num, ), current_quarter), np.full((num, ), np.sin(current_month)), np.full((num, ), np.cos(current_month))]))
     elif(count == 3): # e.g. No Fridays in the data set
-        mondays  = np.transpose(np.array([t, np.ones(num) , np.zeros(num), np.zeros(num)]))
-        tuesdays = np.transpose(np.array([t, np.zeros(num), np.ones(num) , np.zeros(num)]))
-        thursdays = np.transpose(np.array([t, np.zeros(num), np.zeros(num) , np.ones(num)]))
+        mondays  = np.transpose(np.array([t, np.ones(num), np.zeros(num), np.zeros(num), np.full((num, ), current_quarter), np.full((num, ), np.sin(current_month)), np.full((num, ), np.cos(current_month))]))
+        tuesdays = np.transpose(np.array([t, np.zeros(num), np.ones(num), np.zeros(num), np.full((num, ), current_quarter), np.full((num, ), np.sin(current_month)), np.full((num, ), np.cos(current_month))]))
+        thursdays = np.transpose(np.array([t, np.zeros(num), np.zeros(num), np.ones(num), np.full((num, ), current_quarter), np.full((num, ), np.sin(current_month)), np.full((num, ), np.cos(current_month))]))
     elif(count == 2): # e.g. No Fridays in the data set
-        mondays  = np.transpose(np.array([t, np.ones(num) , np.zeros(num)]))
-        tuesdays = np.transpose(np.array([t, np.zeros(num), np.ones(num)]))
-        thursdays = np.transpose(np.array([t, np.zeros(num), np.zeros(num)]))
+        mondays  = np.transpose(np.array([t, np.ones(num), np.zeros(num), np.full((num, ), current_quarter), np.full((num, ), np.sin(current_month)), np.full((num, ), np.cos(current_month))]))
+        tuesdays = np.transpose(np.array([t, np.zeros(num), np.ones(num), np.full((num, ), current_quarter), np.full((num, ), np.sin(current_month)), np.full((num, ), np.cos(current_month))]))
+        thursdays = np.transpose(np.array([t, np.zeros(num), np.zeros(num), np.full((num, ), current_quarter), np.full((num, ), np.sin(current_month)), np.full((num, ), np.cos(current_month))]))
     mon_line = reg.predict(mondays)
     tue_line = reg.predict(tuesdays)
     thu_line = reg.predict(thursdays)
@@ -369,6 +374,9 @@ def prediction(reg, df, start):
                 cols.append(np.ones(num))
             else:
                 cols.append(np.zeros(num))
+        cols.append(np.full((num, ), current_quarter))
+        cols.append(np.full((num, ), np.sin(current_month)))
+        cols.append(np.full((num, ), np.cos(current_month)))
         new_line = np.transpose(np.array(cols))
         weekdays.append(new_line)
         weekday_lines.append(reg.predict(new_line))
@@ -389,4 +397,5 @@ def prediction(reg, df, start):
     # print(f"y: {y}")
     # print(f"y1: {y1}")
 
-    return x_t1[0], y1
+    # return x_t[0], y
+    return x_t1[0], y1  

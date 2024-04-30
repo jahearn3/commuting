@@ -380,3 +380,6 @@ def driving_and_waiting_vs_departure(filename, df, start='home', launch_port='so
     plt.xticks(rotation=35) 
     plt.savefig(f'{plots_folder}/driving_waiting_ratio_vs_departure_from_{start}_to_{end}.png')
     plt.clf()
+
+# TODO: Calculate time at which to leave to arrive by 9am
+# TODO: Make a plot to show seasonality
