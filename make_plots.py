@@ -1,6 +1,7 @@
 import seaborn as sns
 import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
+import matplotlib.cm as cm
 import numpy as np 
 import pandas as pd 
 from statsmodels.formula.api import ols
@@ -141,7 +142,7 @@ def duration_vs_departure(filename, df, start='home', end='work', gbr=False, dtr
         print(f'shape of y_test: {y_test.shape}')
 
     # Practice with gradient boosting regression
-    if(gbr):
+    if gbr:
         start_time = time.time()
         # gbreg, mse, params = model.fit_gbr(X_train, X_test, y_train, y_test)
         gbreg, mse, params = model.fit_gbr_with_grid_search(X_train, X_test, y_train, y_test)
@@ -151,7 +152,7 @@ def duration_vs_departure(filename, df, start='home', end='work', gbr=False, dtr
         ax.plot(x, y, c='c', label='Gradient Boosting')
 
     # Practice with decision tree regression
-    if(dtr):
+    if dtr:
         start_time = time.time()
         # dtreg, mse = model.fit_dtr(X_train, X_test, y_train, y_test)
         dtreg, mse, params = model.fit_dtr_with_grid_search(X_train, X_test, y_train, y_test)
@@ -160,7 +161,7 @@ def duration_vs_departure(filename, df, start='home', end='work', gbr=False, dtr
         print("DTR --- %s seconds ---" % (time.time() - start_time))
         ax.plot(x, y, c='g', label='Decision Tree')
 
-    if(rfr):
+    if rfr:
         start_time = time.time()
         # rfreg, mse = model.fit_rfr(X_train, X_test, y_train, y_test)
         rfreg, mse, params = model.fit_rfr_with_grid_search(X_train, X_test, y_train, y_test)
@@ -169,14 +170,14 @@ def duration_vs_departure(filename, df, start='home', end='work', gbr=False, dtr
         print("RFR --- %s seconds ---" % (time.time() - start_time))
         ax.plot(x, y, c='m', label='Random Forest')
     
-    if(nn):
+    if nn:
         start_time = time.time()
         nnreg, mse = model.fit_nn(X_train, X_test, y_train, y_test)
         x, y = model.prediction(nnreg, df, start)
         print("NN --- %s seconds ---" % (time.time() - start_time))
         ax.plot(x, y, c='orange', label='Neural Network')
 
-    if(xgb):
+    if xgb:
         start_time = time.time()
         # xgbreg, mse = model.fit_xgbr(X_train, X_test, y_train, y_test)
         xgbreg, mse, params = model.fit_xgbr_with_grid_search(X_train, X_test, y_train, y_test)
@@ -185,25 +186,25 @@ def duration_vs_departure(filename, df, start='home', end='work', gbr=False, dtr
         print("XGB --- %s seconds ---" % (time.time() - start_time))
         ax.plot(x, y, c='k', label='XGBoost')
 
-    if(ensemble_r):
+    if ensemble_r:
         start_time = time.time()
         estimators = []
-        if(gbr):
+        if gbr:
             estimators.append(('gb', gbreg))
-        if(dtr):
+        if dtr:
             estimators.append(('dt', dtreg))
-        if(rfr):
+        if rfr:
             estimators.append(('rf', rfreg))
-        if(nn):
+        if nn:
             estimators.append(('nn', nnreg))
-        if(xgb):
+        if xgb:
             estimators.append(('xg', xgbreg))
         ensmbl, mse = model.fit_ensemble(X_train, X_test, y_train, y_test, estimators)
         x, y = model.prediction(ensmbl, df, start)
         print("Ensemble --- %s seconds ---" % (time.time() - start_time))
         ax.plot(x, y, c='chartreuse', label='Ensemble')
 
-    if(gbr or dtr or rfr or nn or xgb):
+    if gbr or dtr or rfr or nn or xgb:
         # ax.legend(loc=1, fontsize=10)
         plt.legend(bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0.)
 
@@ -215,7 +216,7 @@ def duration_vs_departure(filename, df, start='home', end='work', gbr=False, dtr
     # Make directory for plots if it doesn't already exist
     pattern = r'_(.*)\.csv'
     match = re.search(pattern, filename)
-    if(match):
+    if match:
         dataset = match.group(1)
     else:
         dataset = 'tenino'
@@ -239,6 +240,9 @@ def duration_vs_departure(filename, df, start='home', end='work', gbr=False, dtr
     #     plot_feature_importance(plots_folder, start, end, gbreg, X_test, y_test, df)
     
     minutes_violin(plots_folder, start, end, df)
+
+    if ensemble_r:
+        predictions_by_month(plots_folder, ensmbl, df, start, end)
     
 #fig, (ax0, ax1) = plt.subplots(nrows=2, ncols=1, sharex=True)
 #sns.set(color_codes=True)
@@ -382,4 +386,43 @@ def driving_and_waiting_vs_departure(filename, df, start='home', launch_port='so
     plt.clf()
 
 # TODO: Calculate time at which to leave to arrive by 9am
-# TODO: Make a plot to show seasonality
+
+def predictions_by_month(plots_folder, reg, df, start, end):
+    fig = plt.figure()
+    colormap = plt.get_cmap('viridis')
+    values = np.linspace(0, 1, 12)
+    months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+    # TODO Consider using month as a hue
+    ax = sns.scatterplot(data=df, x=start + '_departure_time_hr', y='minutes_to_' + end, s=5)
+    ax = time_xticks(ax, df[start + '_departure_time_hr'].min(), df[start + '_departure_time_hr'].max())
+    Y = []
+    monthly_avg = []
+    for i in range(1, 13):
+        color = colormap(values[i-1])
+        x, y = model.prediction(reg, df, start, i)
+        Y.append(y)
+        monthly_avg.append(np.mean(y))
+        ax.plot(x, y, color=color, label=months[i-1])
+    plt.legend(bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0.)
+    ax.set(xlabel=start.capitalize() + ' Departure Time',
+       ylabel='Minutes to ' + end.capitalize(),
+       title='Commuting Time')
+    plt.savefig(f'{plots_folder}/monthly_prediction_curves_from_{start}_to_{end}.png',  bbox_inches='tight')
+    plt.clf()
+
+    # Bar chart with months as x-axis and +/- compared to average on y-axis
+    Y = np.array(Y)
+    y_avg = np.mean(Y)
+    y_diff = monthly_avg - y_avg
+    # y_avg = np.mean(Y, axis=1)
+    # y_diff = Y - y_avg[:, np.newaxis]
+    # y_diff_t = y_diff.T
+    cmap = plt.get_cmap('viridis')
+    fig, ax = plt.subplots()
+    ax.bar(months, y_diff, color=cmap(np.linspace(0, 1, len(months))))
+    # ax.bar(months, y_diff_t[1], color=cmap(np.linspace(0, 1, len(months))))
+    ax.set(xlabel=start.capitalize() + ' Departure Time',
+       ylabel=f'Difference in Minutes to {end.capitalize()} compared to Mean',
+       title=f'Monthly Differences in Commuting Time from {start.capitalize()} to {end.capitalize()}')
+    plt.savefig(f'{plots_folder}/monthly_prediction_variations_from_{start}_to_{end}.png',  bbox_inches='tight')
+    plt.clf()

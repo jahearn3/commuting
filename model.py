@@ -315,11 +315,10 @@ def adaptive_spacing(df, start):
     return t, num
 
 
-def prediction(reg, df, start):
+def prediction(reg, df, start, current_month=datetime.now().month):
     t, num = adaptive_spacing(df, start)
     # t, num = exponential_spacing(df, start)
-    # TODO: incorporate month into prediction
-    current_month = datetime.now().month
+
     current_quarter = (current_month - 1) // 3 + 1
 
     # TODO: count day_of_week weights and weight the days according to the count 
