@@ -395,6 +395,13 @@ def predictions_by_month(plots_folder, reg, df, start, end):
     # TODO Consider using month as a hue
     ax = sns.scatterplot(data=df, x=start + '_departure_time_hr', y='minutes_to_' + end, s=5)
     ax = time_xticks(ax, df[start + '_departure_time_hr'].min(), df[start + '_departure_time_hr'].max())
+
+    # subset df containing 'month', start + '_departure_time_hr'
+    df_ss = df[['month', start + '_departure_time_hr']]
+    # drop rows where start + '_departure_time_hr' is NaN
+    df_notna = df_ss.dropna()
+
+    counts = df_notna['month'].value_counts().sort_index().to_list()
     Y = []
     monthly_avg = []
     for i in range(1, 13):
@@ -414,15 +421,17 @@ def predictions_by_month(plots_folder, reg, df, start, end):
     Y = np.array(Y)
     y_avg = np.mean(Y)
     y_diff = monthly_avg - y_avg
-    # y_avg = np.mean(Y, axis=1)
-    # y_diff = Y - y_avg[:, np.newaxis]
-    # y_diff_t = y_diff.T
     cmap = plt.get_cmap('viridis')
     fig, ax = plt.subplots()
-    ax.bar(months, y_diff, color=cmap(np.linspace(0, 1, len(months))))
-    # ax.bar(months, y_diff_t[1], color=cmap(np.linspace(0, 1, len(months))))
-    ax.set(xlabel=start.capitalize() + ' Departure Time',
-       ylabel=f'Difference in Minutes to {end.capitalize()} compared to Mean',
-       title=f'Monthly Differences in Commuting Time from {start.capitalize()} to {end.capitalize()}')
+    bars = ax.bar(months, y_diff, color=cmap(np.linspace(0, 1, len(months))))
+    # Add text annotations to the bars
+    for i, bar in enumerate(bars):
+        if y_diff[i] >= 0:
+            ax.text(bar.get_x() + bar.get_width() / 2, bar.get_height(), counts[i], ha='center', va='bottom')
+        else:
+            ax.text(bar.get_x() + bar.get_width() / 2, bar.get_height(), counts[i], ha='center', va='top')
+    ax.set(xlabel='Month',
+       ylabel=f'Time Delta Compared to Mean [Minutes]',
+       title=f'Prediction Variations in Commuting Time from {start.capitalize()} to {end.capitalize()}')
     plt.savefig(f'{plots_folder}/monthly_prediction_variations_from_{start}_to_{end}.png',  bbox_inches='tight')
     plt.clf()
