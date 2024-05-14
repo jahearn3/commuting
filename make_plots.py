@@ -435,3 +435,77 @@ def predictions_by_month(plots_folder, reg, df, start, end):
        title=f'Prediction Variations in Commuting Time from {start.capitalize()} to {end.capitalize()}')
     plt.savefig(f'{plots_folder}/monthly_prediction_variations_from_{start}_to_{end}.png',  bbox_inches='tight')
     plt.clf()
+
+# Horizontal bar chart
+categories = ['December with Leap Second',
+              'January',
+              'May',
+              'July',
+              'August',
+              'October',
+              'December without Leap Second',
+              'March without Spring Forward',
+              'March with Spring Forward',
+              'November with Fall Back',
+              'June with Leap Second',
+              'April',
+              'September', 
+              'June without Leap Second',
+              'November without Fall Back',
+              'February with Leap Day',
+              'February without Leap Day']
+values = [2678401, 2678400, 2678400, 2678400, 2678400, 2678400, 2678400, 2678400, 2674800, 2595600, 2592001, 2592000, 2592000, 2592000, 2592000, 2505600, 2419200]
+jan_color = 'skyblue'
+feb_color = 'mediumpurple'
+mar_color = 'mediumspringgreen'
+apr_color = 'pink'
+may_color = 'gold'
+jun_color = 'darkorange'
+jul_color = 'red'
+aug_color = 'limegreen'
+sep_color = 'indigo'
+oct_color = 'saddlebrown'
+nov_color = 'maroon'
+dec_color = 'silver'
+bar_colors = [dec_color, jan_color, may_color, jul_color, aug_color, oct_color, dec_color, mar_color, mar_color, nov_color, jun_color, apr_color, sep_color, jun_color, nov_color, feb_color, feb_color]
+cmap = plt.get_cmap('twilight_shifted')
+colormap = cmap(np.linspace(0.1, 1, 8))
+tier_1_color = colormap[7]
+tier_2_color = colormap[6]
+tier_3_color = colormap[5]
+tier_4_color = colormap[4]
+tier_5_color = colormap[3]
+tier_6_color = colormap[2]
+tier_7_color = colormap[1]
+tier_8_color = colormap[0]
+bar_colors = [tier_1_color, tier_2_color, tier_2_color, tier_2_color, tier_2_color, tier_2_color, tier_2_color, tier_2_color, tier_3_color, tier_4_color, tier_5_color, tier_6_color, tier_6_color, tier_6_color, tier_6_color, tier_7_color, tier_8_color]
+leap_second_outline_color = 'chartreuse'
+normal_outline_color = 'gray'
+spring_forward_outline_color = 'green'
+fall_back_outline_color = 'red'
+leap_day_outline_color = 'blue'
+outline_colors = [leap_second_outline_color, normal_outline_color, normal_outline_color, normal_outline_color, normal_outline_color, normal_outline_color, normal_outline_color, normal_outline_color, spring_forward_outline_color, fall_back_outline_color, leap_second_outline_color, normal_outline_color, normal_outline_color, normal_outline_color, normal_outline_color, leap_day_outline_color, normal_outline_color]
+
+categories.reverse()
+values.reverse()
+bar_colors.reverse()
+outline_colors.reverse()
+
+# Create a horizontal bar chart
+# plt.barh(categories, values, color=bar_colors, edgecolor=outline_colors)
+plt.barh(categories, values, color=bar_colors)
+
+for i, v in enumerate(values):
+    plt.text(v + 0.5, i, str(v), color='black', va='center')
+
+# Add labels and title
+plt.xlabel('Seconds')
+plt.ylabel('')
+plt.title('Months Ranked in Order of Length')
+# plt.suptitle('in the United States', y=0.89, fontsize=9, color='grey')
+ax = plt.gca()
+ax.spines['top'].set_visible(False)
+ax.spines['right'].set_visible(False)
+plt.tick_params(axis='x', bottom=False, labelbottom=False)
+plt.savefig(f'months_ranked.png',  bbox_inches='tight')
+plt.clf()
