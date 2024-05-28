@@ -68,7 +68,7 @@ def plot_feature_importance(plots_folder, start, end, reg, X_test, y_test, df):
 
 def time_xticks(ax, earliest_departure, latest_departure):
     # Change x-axis ticks from decimal form to HH:MM form
-    ax.xaxis.set_major_locator(ticker.MaxNLocator(6, steps=[1, 5, 10]))
+    ax.xaxis.set_major_locator(ticker.MaxNLocator(7, steps=[1, 5, 10]))
     ticks_loc = ax.get_xticks().tolist()
     # print(ticks_loc)
     # ticks_interval = ticks_loc[1] - ticks_loc[0]
@@ -436,76 +436,103 @@ def predictions_by_month(plots_folder, reg, df, start, end):
     plt.savefig(f'{plots_folder}/monthly_prediction_variations_from_{start}_to_{end}.png',  bbox_inches='tight')
     plt.clf()
 
-# Horizontal bar chart
-categories = ['December with Leap Second',
-              'January',
-              'May',
-              'July',
-              'August',
-              'October',
-              'December without Leap Second',
-              'March without Spring Forward',
-              'March with Spring Forward',
-              'November with Fall Back',
-              'June with Leap Second',
-              'April',
-              'September', 
-              'June without Leap Second',
-              'November without Fall Back',
-              'February with Leap Day',
-              'February without Leap Day']
-values = [2678401, 2678400, 2678400, 2678400, 2678400, 2678400, 2678400, 2678400, 2674800, 2595600, 2592001, 2592000, 2592000, 2592000, 2592000, 2505600, 2419200]
-jan_color = 'skyblue'
-feb_color = 'mediumpurple'
-mar_color = 'mediumspringgreen'
-apr_color = 'pink'
-may_color = 'gold'
-jun_color = 'darkorange'
-jul_color = 'red'
-aug_color = 'limegreen'
-sep_color = 'indigo'
-oct_color = 'saddlebrown'
-nov_color = 'maroon'
-dec_color = 'silver'
-bar_colors = [dec_color, jan_color, may_color, jul_color, aug_color, oct_color, dec_color, mar_color, mar_color, nov_color, jun_color, apr_color, sep_color, jun_color, nov_color, feb_color, feb_color]
-cmap = plt.get_cmap('twilight_shifted')
-colormap = cmap(np.linspace(0.1, 1, 8))
-tier_1_color = colormap[7]
-tier_2_color = colormap[6]
-tier_3_color = colormap[5]
-tier_4_color = colormap[4]
-tier_5_color = colormap[3]
-tier_6_color = colormap[2]
-tier_7_color = colormap[1]
-tier_8_color = colormap[0]
-bar_colors = [tier_1_color, tier_2_color, tier_2_color, tier_2_color, tier_2_color, tier_2_color, tier_2_color, tier_2_color, tier_3_color, tier_4_color, tier_5_color, tier_6_color, tier_6_color, tier_6_color, tier_6_color, tier_7_color, tier_8_color]
-leap_second_outline_color = 'chartreuse'
-normal_outline_color = 'gray'
-spring_forward_outline_color = 'green'
-fall_back_outline_color = 'red'
-leap_day_outline_color = 'blue'
-outline_colors = [leap_second_outline_color, normal_outline_color, normal_outline_color, normal_outline_color, normal_outline_color, normal_outline_color, normal_outline_color, normal_outline_color, spring_forward_outline_color, fall_back_outline_color, leap_second_outline_color, normal_outline_color, normal_outline_color, normal_outline_color, normal_outline_color, leap_day_outline_color, normal_outline_color]
+# Plot
+import matplotlib.dates as mdates
 
-categories.reverse()
-values.reverse()
-bar_colors.reverse()
-outline_colors.reverse()
+tai = ['2022-12-31 07:00:36.000000',
+       '2022-12-31 12:00:36.000000', 
+       '2022-12-31 12:00:37.000000',
+       '2022-12-31 12:00:38.000011',
+       '2023-01-01 00:00:35.499976',
+       '2023-01-01 00:00:36.499988',
+       '2023-01-01 00:00:37.000000',
+       '2023-01-01 00:00:37.500000',
+       '2023-01-01 00:00:38.000000',
+       '2023-01-01 00:00:38.500011',
+       '2023-01-01 00:00:39.500023',
+       '2023-01-01 12:00:36.999988',
+       '2023-01-01 12:00:38.000000',
+       '2023-01-01 12:00:39.000000',   
+       '2023-01-01 17:00:39.000000']
 
-# Create a horizontal bar chart
-# plt.barh(categories, values, color=bar_colors, edgecolor=outline_colors)
-plt.barh(categories, values, color=bar_colors)
+unsmeared = ['2022-12-31 06:59:59.000000',
+             '2022-12-31 11:59:59.000000', 
+             '2022-12-31 12:00:00.000000',
+             '2022-12-31 12:00:01.000011',
+             '2022-12-31 23:59:58.499976',
+             '2022-12-31 23:59:59.499988',
+             '2022-12-31 23:59:60.000000',
+             '2022-12-31 23:59:60.500000',
+             '2023-01-01 00:00:00.000000',
+             '2023-01-01 00:00:00.500011',
+             '2023-01-01 00:00:01.500023',
+             '2023-01-01 11:59:58.999988',
+             '2023-01-01 12:00:00.000000',
+             '2023-01-01 12:00:01.000000',
+             '2023-01-01 17:00:01.000000']
 
-for i, v in enumerate(values):
-    plt.text(v + 0.5, i, str(v), color='black', va='center')
+smeared = ['2022-12-31 06:59:59.000000',
+           '2022-12-31 11:59:59.000000',
+           '2022-12-31 12:00:00.000000',
+           '2022-12-31 12:00:01.000000',
+           '2022-12-31 23:59:58.000000',
+           '2022-12-31 23:59:59.000000',
+           '2022-12-31 23:59:59.500005',
+           '2023-01-01 00:00:00.000000',
+           '2023-01-01 00:00:00.499994',
+           '2023-01-01 00:00:01.000000',
+           '2023-01-01 00:00:02.000000',
+           '2023-01-01 11:59:59.000000',
+           '2023-01-01 12:00:00.000000',
+           '2023-01-01 12:00:01.000000',
+           '2023-01-01 17:00:01.000000']
 
-# Add labels and title
-plt.xlabel('Seconds')
-plt.ylabel('')
-plt.title('Months Ranked in Order of Length')
-# plt.suptitle('in the United States', y=0.89, fontsize=9, color='grey')
-ax = plt.gca()
+
+    
+unsmeared[6] = '2022-12-31 23:59:59.000000'
+unsmeared[7] = '2022-12-31 23:59:59.500000'
+
+tai_dt = pd.to_datetime(tai)
+unsmeared_dt = pd.to_datetime(unsmeared)
+smeared_dt = pd.to_datetime(smeared)
+diff_unsmeared = (tai_dt - unsmeared_dt).total_seconds()
+diff_smeared = (tai_dt - smeared_dt).total_seconds()
+
+# cosine smear
+# t = np.linspace(tai_dt[0].timestamp(), tai_dt[-1].timestamp(), 100)
+# datetime_index = pd.date_range(pd.Timestamp('2022-12-31 14:00:00.000000'), pd.Timestamp('2023-01-01 10:00:00.000000'), periods=100)
+datetime_index = pd.date_range(pd.Timestamp('2022-12-31 14:00:00.000000'), pd.Timestamp('2023-01-02 06:00:00.000000'), periods=100)
+t = datetime_index.to_series().astype(int)
+w = 20.0 * 60 * 60 * 5 * 2 # the 20.0 corresponds to 20 hours, the other numbers are to convert to seconds and then make it work visually
+cos_smear = (1.0 - np.cos(np.pi * t / w)) / 2.0
+cos_smeared = pd.to_datetime(t) + pd.to_timedelta(cos_smear, unit='s')
+
+fig, ax = plt.subplots()
+ax.plot(tai_dt, diff_unsmeared, label='UTC (Universal Coordinated Time)', linewidth=3)
+ax.plot(tai_dt[1:-2], diff_smeared[1:-2], label='24-hour Linear Smear', linewidth=2)
+ax.plot([pd.Timestamp('2022-12-31 14:00:00.000000'), pd.Timestamp('2023-01-01 10:00:00.000000')], [37, 38], label='20-hour Linear Smear', linewidth=2)
+ax.plot(datetime_index[:50], 37 + cos_smear[:50], label='20-hour Cosine Smear', linewidth=2)
+ax.xaxis.set_major_formatter(mdates.DateFormatter('%H:%M:%S'))
+
+font = {'family': 'monospace'}
+text_props = {'fontdict': font, 'fontsize': 10, 'color': 'red'}
+
+ax.text(tai_dt[7], 37.075,  '23:59:59 ', va='top', ha='right', **text_props)
+ax.text(tai_dt[7], 37.980, ' 23:59:60', va='top', ha='left',  **text_props)
+
+# insert text that says "Midnight" in the middle on the bottom just above the spine
+ax.text(tai_dt[7], 37.0, 'Midnight', fontsize=12, va='top', ha='center')
+
+# # insert text that says "Noon" in two places, one right, the other left, on the bottom just above the spine
+ax.text(tai_dt[2] , 37.0, 'Noon', fontsize=12, va='top', ha='center')
+ax.text(tai_dt[11], 37.0, 'Noon', fontsize=12, va='top', ha='center')
+
+ax.legend(loc=2, fontsize=8)
 ax.spines['top'].set_visible(False)
 ax.spines['right'].set_visible(False)
-plt.tick_params(axis='x', bottom=False, labelbottom=False)
-plt.savefig(f'months_ranked.png',  bbox_inches='tight')
+plt.suptitle('Handling Leap Seconds')
+plt.xlabel('TAI (International Atomic Time)')
+plt.ylabel('Seconds Behind TAI (International Atomic Time)')
+plt.xticks(rotation=90)
+plt.savefig('smeared_vs_unsmeared.png',  bbox_inches='tight')
 plt.clf()
