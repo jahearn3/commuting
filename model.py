@@ -309,8 +309,25 @@ def adaptive_spacing(df, start):
         # Append the average
         t.append(np.mean(t_slice))
     t.sort()
-    # print('Adaptive method:')
-    # print(t)
+
+    # Fewer points where data is too concentrated
+    # min_x_spacing = 1.0 / 12.0  # 1/12 hour = 5 minutes
+    # min_x_spacing = 1.0 / 10.0  # 1/10 hour = 6 minutes
+    min_x_spacing = 1.0 / 6.0  # 1/6 hour = 10 minutes
+    count = 0 
+    for i in range(1, len(t) - 1):
+        if t[i] - t[i-1] < min_x_spacing:
+            # Replace point with mean between it and the next point
+            t_i = t[i]
+            t_ip1 = t[i+1]
+            # Put it at the end for now; it will be removed after the loop
+            count += 1
+            t.append(t.pop(i))
+            t[i] = (t_i + t_ip1) / 2
+    
+    if count > 0:
+        t = t[:-count+1]
+
     num = len(t)
     return t, num
 
