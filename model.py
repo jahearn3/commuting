@@ -338,7 +338,7 @@ def prediction(reg, df, start, current_month=datetime.now().month):
 
     current_quarter = (current_month - 1) // 3 + 1
 
-    # TODO: count day_of_week weights and weight the days according to the count 
+    # TODO: count day_of_week sums and weight the days according to the count
     df = pd.get_dummies(data=df, columns=['day_of_week'], drop_first=True)
     # print(df['day_of_week_Mon'].sum())
     # print(df['day_of_week_Tue'].sum())
