@@ -68,7 +68,7 @@ def plot_feature_importance(plots_folder, start, end, reg, X_test, y_test, df):
 
 def time_xticks(ax, earliest_departure, latest_departure):
     # Change x-axis ticks from decimal form to HH:MM form
-    ax.xaxis.set_major_locator(ticker.MaxNLocator(7, steps=[1, 5, 10]))
+    ax.xaxis.set_major_locator(ticker.MaxNLocator(9, steps=[1, 5, 10]))
     ticks_loc = ax.get_xticks().tolist()
     # print(ticks_loc)
     # ticks_interval = ticks_loc[1] - ticks_loc[0]
@@ -98,12 +98,28 @@ def duration_vs_departure(filename, df, start='home', end='work', gbr=False, dtr
     df_subset = df_subset.dropna()
     x_latest = df_subset[start + '_departure_time_hr'][df_subset.index[-1]]
     y_latest = df_subset['minutes_to_' + end][df_subset.index[-1]]
-    # x_latest = df[start + '_departure_time_hr'][df.index[-1]]
-    # y_latest = df['minutes_to_' + end][df.index[-1]]
     ax.scatter(x_latest, y_latest, c='#FFFF14', s=100)
+
+    # Print percentile of most recent trip compared to similar departure times
+    df_similar_departure = df_subset[(df_subset[start + '_departure_time_hr'] > x_latest - 0.1) & (df_subset[start + '_departure_time_hr'] < x_latest + 0.1)]
+    if len(df_similar_departure > 1):
+        percentile = (df_similar_departure['minutes_to_' + end] > y_latest).sum() / len(df_similar_departure)
+        x_latest_hmm = ("%d:%02d" % (int(x_latest), int((x_latest*60) % 60))).format(x_latest)
+        x_similar_min = df_similar_departure[start + '_departure_time_hr'].min()
+        x_similar_max = df_similar_departure[start + '_departure_time_hr'].max()
+        x_similar_min_hmm = ("%d:%02d" % (int(x_similar_min), int((x_similar_min*60) % 60))).format(x_similar_min)
+        x_similar_max_hmm = ("%d:%02d" % (int(x_similar_max), int((x_similar_max*60) % 60))).format(x_similar_max)
+        percentile_text = f'The most recent trip departing {start} at {x_latest_hmm} took {int(y_latest)} minutes, which is faster than {percentile:.0%} of {len(df_similar_departure)} trips with departure times between {x_similar_min_hmm} and {x_similar_max_hmm}.'
+        print(percentile_text)
+        # print(df_similar_departure[[start + '_departure_time_hr', 'minutes_to_' + end]].sort_values(by='minutes_to_' + end))
+        
+        annotate = True
+        percentile_text = f'The most recent trip departing \n{start} at {x_latest_hmm} took {int(y_latest)} minutes, \nwhich is faster than {percentile:.0%} of {len(df_similar_departure)} \ntrips with departure times \nbetween {x_similar_min_hmm} and {x_similar_max_hmm}.'
+        if annotate:
+            ax.text(1.05, 0.25, percentile_text, fontsize=8, transform=ax.transAxes, verticalalignment='top')
     
     # Add comments near points
-    if(comments):
+    if comments:
         for i, row in df.iterrows():
             try:
                 chars = len(str(row['comments_from_' + start + '_to_' + end]))

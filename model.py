@@ -327,6 +327,9 @@ def adaptive_spacing(df, start):
     
     if count > 0:
         t = t[:-count+1]
+    
+    if t[-1] < df[start + '_departure_time_hr'].max():
+        t.append(df[start + '_departure_time_hr'].max())
 
     num = len(t)
     return t, num
