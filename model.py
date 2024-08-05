@@ -29,7 +29,6 @@ def nonlinear_prediction_line(df, start, end):
     results = ols('minutes_to_' + end + ' ~ ' + start +'_departure_time_hr + ' + start + '_departure_time_hr2', data=df).fit()
     pred = results.predict(df)
     coeffs = np.polyfit(df[start + '_departure_time_hr'], df['minutes_to_' + end], 2)
-    # print(coeffs)
     return x, coeffs[0] * x + coeffs[1] * x + coeffs[2]
 
 
@@ -59,7 +58,8 @@ def compute_mse(reg, abbreviation, X_train, X_test, y_train, y_test):
 
 def fit_dtr(X_train, X_test, y_train, y_test):
     seed = 3
-    dt = DecisionTreeRegressor(max_depth=8, random_state=seed)
+    params = {'max_depth': 5, 'max_features': 'sqrt', 'min_samples_leaf': 4, 'min_samples_split': 5}
+    dt = DecisionTreeRegressor(random_state=seed, **params)
     dt.fit(X_train, y_train)
     mse = compute_mse(dt, 'DTR', X_train, X_test, y_train, y_test)
     return dt, mse
@@ -70,9 +70,9 @@ def fit_dtr_with_grid_search(X_train, X_test, y_train, y_test):
     y = np.concatenate((y_train, y_test), axis=0)
     dt = DecisionTreeRegressor()
     param_grid = {'max_depth': [5, 10, 20],
-              'min_samples_split': [2, 5, 10],
-              'min_samples_leaf': [1, 2, 4],
-              'max_features': ['sqrt']
+            #   'min_samples_split': [2, 5, 10],
+            #   'min_samples_leaf': [1, 2, 4],
+            #   'max_features': ['sqrt']
               }
     grid_search = GridSearchCV(estimator=dt, param_grid=param_grid, cv=5, n_jobs=-1, scoring='neg_mean_squared_error')
     grid_search.fit(X, y)
@@ -86,20 +86,12 @@ def fit_dtr_with_grid_search(X_train, X_test, y_train, y_test):
 
 def fit_gbr(X_train, X_test, y_train, y_test):
     params = {
-        "n_estimators": 500,
-        "max_depth": 6,
+        "n_estimators": 150,
+        "max_depth": 3,
         "min_samples_split": 4,
         "learning_rate": 0.01,
-        "loss": "squared_error"#,
+        "loss": "squared_error",
     }
-    # hyperparameters -> minimum deviance
-    #  500, 4,  5, 0.01 -> 200 @ 500
-    # 1000, 4,  5, 0.01 -> 200 @ 1000
-    #  500, 8,  5, 0.01 -> 250 @ 500
-    #  500, 4, 10, 0.01 -> 280 @ 500
-    # 1000, 4, 10, 0.01 -> 200 @ 1000
-    #  500, 3,  4, 0.01 -> 200 @ 500 <- selected
-    #  500, 2,  3, 0.01 -> 270 @ 500
 
     reg = GradientBoostingRegressor(**params)
     reg.fit(X_train, y_train)
@@ -186,12 +178,7 @@ def fit_xgbr_with_grid_search(X_train, X_test, y_train, y_test):
 
 def fit_rfr(X_train, X_test, y_train, y_test):
     # These params were determined the best through the below GridSearchCV
-    params = {
-        "n_estimators": 200,
-        "max_depth": 3,
-        "max_features": 'sqrt',
-        "random_state": 18,
-    }
+    params = {'max_depth': 20, 'max_features': 'sqrt', 'min_samples_leaf': 1, 'min_samples_split': 2, 'n_estimators': 100}
     rf = RandomForestRegressor(**params)
     # rf = RandomForestRegressor(n_estimators = 300, max_features = 'sqrt', max_depth = 5, random_state = 18)
     rf.fit(X_train, y_train)
@@ -227,10 +214,10 @@ def fit_rfr_with_grid_search(X_train, X_test, y_train, y_test):
     y = np.concatenate((y_train, y_test), axis=0)
     rf = RandomForestRegressor()
     param_grid = {'n_estimators': [100, 200, 500],
-              'max_features': ['sqrt'],
+            #   'max_features': ['sqrt'],
               'max_depth': [5, 10, 20],
-              'min_samples_split': [2, 5, 10],
-              'min_samples_leaf': [1, 2, 4],
+            #   'min_samples_split': [2, 5, 10],
+            #   'min_samples_leaf': [1, 2, 4],
               }
     grid_search = GridSearchCV(estimator=rf, param_grid=param_grid, cv=5, n_jobs=-1, scoring='neg_mean_squared_error')
     grid_search.fit(X, y)
@@ -263,9 +250,9 @@ def fit_ensemble(X_train, X_test, y_train, y_test, estimators):
 def hybrid_spacing(df, start):
     # Hybrid between linear spacing and Gaussian spacing for time distribution
     num = int(np.sqrt(df[start + '_departure_time_hr'].notnull().sum())) + 1
-    t_lin = np.linspace(df[start + '_departure_time_hr'].min(), df[start + '_departure_time_hr'].max(), num) # linear time spacing component 
-    t_gau = np.random.normal(df[start + '_departure_time_hr'].mean(), df[start + '_departure_time_hr'].std(), num) # Gaussian time spacing component
-    t = np.concatenate((t_lin, t_gau)) # Combine the two time spacing components
+    t_lin = np.linspace(df[start + '_departure_time_hr'].min(), df[start + '_departure_time_hr'].max(), num)  # linear time spacing component 
+    t_gau = np.random.normal(df[start + '_departure_time_hr'].mean(), df[start + '_departure_time_hr'].std(), num)  # Gaussian time spacing component
+    t = np.concatenate((t_lin, t_gau))  # Combine the two time spacing components
     t.sort()
     return t, num
 
@@ -277,7 +264,7 @@ def exponential_spacing(df, start):
     mu = df[start + '_departure_time_hr'].mean()
     t.append(mu)
     sigma = df[start + '_departure_time_hr'].std()
-    # Factors for exponential spacing outward from the mean 
+    # Factors for exponential spacing outward from the mean
     factors = np.power(np.linspace(0, 1, 9), 2)
     fac = factors[1:5] * 10
     for f in fac:
@@ -324,10 +311,10 @@ def adaptive_spacing(df, start):
             count += 1
             t.append(t.pop(i))
             t[i] = (t_i + t_ip1) / 2
-    
+
     if count > 0:
         t = t[:-count+1]
-    
+
     if t[-1] < df[start + '_departure_time_hr'].max():
         t.append(df[start + '_departure_time_hr'].max())
 
@@ -365,15 +352,15 @@ def prediction(reg, df, start, current_month=datetime.now().month):
     #         count += 1
     count = sum(1 for col in df.columns if col[:4] == 'day_')
     if(count == 4): # Data includes entries from each of the 5 weekdays
-        mondays  = np.transpose(np.array([t, np.ones(num), np.zeros(num), np.zeros(num), np.zeros(num), np.full((num, ), current_quarter), np.full((num, ), np.sin(current_month)), np.full((num, ), np.cos(current_month))]))
+        mondays = np.transpose(np.array([t, np.ones(num), np.zeros(num), np.zeros(num), np.zeros(num), np.full((num, ), current_quarter), np.full((num, ), np.sin(current_month)), np.full((num, ), np.cos(current_month))]))
         tuesdays = np.transpose(np.array([t, np.zeros(num), np.ones(num), np.zeros(num), np.zeros(num), np.full((num, ), current_quarter), np.full((num, ), np.sin(current_month)), np.full((num, ), np.cos(current_month))]))
         thursdays = np.transpose(np.array([t, np.zeros(num), np.zeros(num), np.zeros(num), np.ones(num), np.full((num, ), current_quarter), np.full((num, ), np.sin(current_month)), np.full((num, ), np.cos(current_month))]))
     elif(count == 3): # e.g. No Fridays in the data set
-        mondays  = np.transpose(np.array([t, np.ones(num), np.zeros(num), np.zeros(num), np.full((num, ), current_quarter), np.full((num, ), np.sin(current_month)), np.full((num, ), np.cos(current_month))]))
+        mondays = np.transpose(np.array([t, np.ones(num), np.zeros(num), np.zeros(num), np.full((num, ), current_quarter), np.full((num, ), np.sin(current_month)), np.full((num, ), np.cos(current_month))]))
         tuesdays = np.transpose(np.array([t, np.zeros(num), np.ones(num), np.zeros(num), np.full((num, ), current_quarter), np.full((num, ), np.sin(current_month)), np.full((num, ), np.cos(current_month))]))
         thursdays = np.transpose(np.array([t, np.zeros(num), np.zeros(num), np.ones(num), np.full((num, ), current_quarter), np.full((num, ), np.sin(current_month)), np.full((num, ), np.cos(current_month))]))
     elif(count == 2): # e.g. No Fridays in the data set
-        mondays  = np.transpose(np.array([t, np.ones(num), np.zeros(num), np.full((num, ), current_quarter), np.full((num, ), np.sin(current_month)), np.full((num, ), np.cos(current_month))]))
+        mondays = np.transpose(np.array([t, np.ones(num), np.zeros(num), np.full((num, ), current_quarter), np.full((num, ), np.sin(current_month)), np.full((num, ), np.cos(current_month))]))
         tuesdays = np.transpose(np.array([t, np.zeros(num), np.ones(num), np.full((num, ), current_quarter), np.full((num, ), np.sin(current_month)), np.full((num, ), np.cos(current_month))]))
         thursdays = np.transpose(np.array([t, np.zeros(num), np.zeros(num), np.full((num, ), current_quarter), np.full((num, ), np.sin(current_month)), np.full((num, ), np.cos(current_month))]))
     mon_line = reg.predict(mondays)
