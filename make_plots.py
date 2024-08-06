@@ -98,7 +98,7 @@ def duration_vs_departure(filename, df, start='home', end='work', gbr=False, dtr
     ax.scatter(x_latest, y_latest, c='#FFFF14', s=100)
 
     # Print percentile of most recent trip compared to similar departure times
-    df_similar_departure = df_subset[(df_subset[start + '_departure_time_hr'] > x_latest - 0.1) & (df_subset[start + '_departure_time_hr'] < x_latest + 0.1)]
+    df_similar_departure = df_subset[(df_subset[start + '_departure_time_hr'] > x_latest - 0.15) & (df_subset[start + '_departure_time_hr'] < x_latest + 0.15)]
     if len(df_similar_departure) > 1:
         percentile = (df_similar_departure['minutes_to_' + end] > y_latest).sum() / len(df_similar_departure)
         x_latest_hmm = ("%d:%02d" % (int(x_latest), int((x_latest*60) % 60))).format(x_latest)
@@ -111,7 +111,15 @@ def duration_vs_departure(filename, df, start='home', end='work', gbr=False, dtr
         percentile_text = f'The most recent trip departing \n{start} at {x_latest_hmm} took {int(y_latest)} minutes, \nwhich is faster than {percentile:.0%} of {len(df_similar_departure)} \ntrips with departure times \nbetween {x_similar_min_hmm} and {x_similar_max_hmm}.'
         if annotate:
             ax.text(1.05, 0.25, percentile_text, fontsize=8, transform=ax.transAxes, verticalalignment='top')
-    
+
+    # Add horizontal line at mean 
+    mean = df['minutes_to_' + end].mean()
+    ax.axhline(mean, color='c', linestyle='dotted', label='Mean')
+
+    # Add horizontal line at 3 * sigma
+    sigma = 3 * df['minutes_to_' + end].std()
+    ax.axhline(mean + sigma, color='gray', linestyle='dotted', label=r'Mean + 3\sigma')
+
     # Add comments near points
     if comments:
         for i, row in df.iterrows():
@@ -203,7 +211,7 @@ def duration_vs_departure(filename, df, start='home', end='work', gbr=False, dtr
         if show_extra_prediction_lines:
             ax.plot(x, y, c='chartreuse', label='Ensemble')
         else:
-            ax.plot(x, y, c='k', label='Ensemble')
+            ax.plot(x, y, c='k', label='Prediction')
 
     if gbr or dtr or rfr or nn or xgb:
         plt.legend(bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0.)

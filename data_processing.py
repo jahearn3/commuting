@@ -81,12 +81,13 @@ def preprocess_data(start, end, df):
     features.extend(['quarter', 'month_sin', 'month_cos'])
 
     # Filter out outliers
-    print(f'min: {df_notna["minutes_to_" + end].min()}')
-    print(f'max: {df_notna["minutes_to_" + end].max()}')
-    print(f'mean: {df_notna["minutes_to_" + end].mean()}')
-    print(f'3 * std: {3 * df_notna["minutes_to_" + end].std()}')
-    df_ready = df_notna[np.abs(df_notna["minutes_to_" + end] - df_notna["minutes_to_" + end].mean()) <= (3 * df_notna["minutes_to_" + end].std())]
-    df_filtered_out = df_notna[~(np.abs(df_notna["minutes_to_" + end] - df_notna["minutes_to_" + end].mean()) <= (3 * df_notna["minutes_to_" + end].std()))]
+    print(f'min: {int(df_notna["minutes_to_" + end].min())}')
+    print(f'max: {int(df_notna["minutes_to_" + end].max())}')
+    print(f'mean: {round(df_notna["minutes_to_" + end].mean(), 2)}')
+    print(f'3 * std: {round(3 * df_notna["minutes_to_" + end].std(), 2)}')
+    mean_time = df_notna["minutes_to_" + end].mean()
+    df_ready = df_notna[np.abs(df_notna["minutes_to_" + end] - mean_time) <= (3 * df_notna["minutes_to_" + end].std())]
+    df_filtered_out = df_notna[~(np.abs(df_notna["minutes_to_" + end] - mean_time) <= (3 * df_notna["minutes_to_" + end].std()))]
     print('Filtered out:')
     print(df_filtered_out[['date', 'minutes_to_' + end]])
 
