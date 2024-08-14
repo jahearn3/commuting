@@ -89,7 +89,7 @@ def duration_vs_departure(filename, df, start='home', end='work', gbr=False, dtr
 
     # Initialize the visualization
     ax = sns.scatterplot(data=df, x=start + '_departure_time_hr', y='minutes_to_' + end, hue='day_of_week', hue_order=['Mon', 'Tue', 'Wed', 'Thu', 'Fri'], s=1)
-    
+
     # Highlight the most recent trip by putting a yellow halo around it
     df_subset = df[[start + '_departure_time_hr', 'minutes_to_' + end]]
     df_subset = df_subset.dropna()
@@ -118,7 +118,7 @@ def duration_vs_departure(filename, df, start='home', end='work', gbr=False, dtr
 
     # Add horizontal line at 3 * sigma
     sigma = 3 * df['minutes_to_' + end].std()
-    ax.axhline(mean + sigma, color='gray', linestyle='dotted', label=r'Mean + 3\sigma')
+    ax.axhline(mean + sigma, color='gray', linestyle='dotted', label=r'Mean + $3\sigma$')
 
     # Add comments near points
     if comments:
@@ -139,6 +139,10 @@ def duration_vs_departure(filename, df, start='home', end='work', gbr=False, dtr
     x, y = model.linear_prediction_from_statsmodels(df, start, end)
     if show_extra_prediction_lines:
         ax.plot(x, y, c='b', label='Linear', linestyle='dotted')
+
+    # TODO: Consider filtering out outliers using the 3 sigma from linear fit line instead of the 3 sigma from the mean line
+    # ax.plot(x, y, c='b', label='Linear', linestyle='dotted')
+    # ax.plot(x, y + sigma, c='b', label=r'Linear + $3\sigma$', linestyle='dotted')
 
     # Split data into training and test sets
     if gbr or dtr or rfr or nn or xgb:
@@ -220,7 +224,7 @@ def duration_vs_departure(filename, df, start='home', end='work', gbr=False, dtr
     ax.set(xlabel=start.capitalize() + ' Departure Time',
        ylabel='Minutes to ' + end.capitalize(),
        title='Commuting Time')
-    
+
     # Make directory for plots if it doesn't already exist
     pattern = r'_(.*)\.csv'
     match = re.search(pattern, filename)
@@ -239,18 +243,21 @@ def duration_vs_departure(filename, df, start='home', end='work', gbr=False, dtr
 
     # Plot the residuals 
     plot_residuals(plots_folder, start, end, df)
-    
+
     # Plot the gradient boosting regression training deviance
     # if(gbr):
     #     plot_gbr_training_deviance(plots_folder, start, end, params, gbreg, X_test, y_test)
-    
+
     # if(gbr):
     #     plot_feature_importance(plots_folder, start, end, gbreg, X_test, y_test, df)
-    
+
     minutes_violin(plots_folder, start, end, df)
 
     if ensemble_r:
         predictions_by_month(plots_folder, ensmbl, df, start, end)
+
+    departure_times_over_time(plots_folder, start, end, df)
+    arrival_times_over_time(plots_folder, start, end, df)
 
 
 # violinplot of minutes to work
@@ -409,3 +416,75 @@ def predictions_by_month(plots_folder, reg, df, start, end):
        title=f'Prediction Variations in Commuting Time from {start.capitalize()} to {end.capitalize()}')
     plt.savefig(f'{plots_folder}/monthly_prediction_variations_from_{start}_to_{end}.png',  bbox_inches='tight')
     plt.clf()
+
+
+def departure_times_over_time(plots_folder, start, end, df):
+    fig = plt.figure()
+    # Apply the default theme
+    sns.set_theme()
+
+    # Initialize the visualization
+    ax = sns.scatterplot(data=df, x='date', y=start + '_departure_time_hr', hue='day_of_week', hue_order=['Mon', 'Tue', 'Wed', 'Thu', 'Fri'], legend=False)
+
+    # Rotate and align the tick labels so they look better
+    # fig.autofmt_xdate()
+
+    ax.set(xlabel='Date',
+       ylabel=start.capitalize() + ' Departure Time',
+       title='Departure Time Evolution')
+    plt.xticks(rotation=35)
+    if end =='home':
+        ax.axhline(17, color='c', linestyle='dotted')
+    plt.savefig(f'{plots_folder}/departure_time_evolution_from_{start}_to_{end}.png',  bbox_inches='tight')
+    plt.clf()
+
+
+def arrival_times_over_time(plots_folder, start, end, df):
+    fig = plt.figure()
+    # Apply the default theme
+    sns.set_theme()
+
+    # Initialize the visualization
+    ax = sns.scatterplot(data=df, x='date', y=end + '_arrival_time_hr', hue='day_of_week', hue_order=['Mon', 'Tue', 'Wed', 'Thu', 'Fri'], legend=False)
+
+    # Rotate and align the tick labels so they look better
+    # fig.autofmt_xdate()
+
+    ax.set(xlabel='Date',
+       ylabel=end.capitalize() + ' Arrival Time',
+       title='Arrival Time Evolution')
+    plt.xticks(rotation=35)
+    if end == 'work':
+        ax.axhline(9, color='c', linestyle='dotted')
+    plt.savefig(f'{plots_folder}/arrival_time_evolution_from_{start}_to_{end}.png',  bbox_inches='tight')
+    plt.clf()
+
+    mon_df = df[df['day_of_week'] == 'Mon']
+    tue_df = df[df['day_of_week'] == 'Tue']
+    wed_df = df[df['day_of_week'] == 'Wed']
+    thu_df = df[df['day_of_week'] == 'Thu']
+    fri_df = df[df['day_of_week'] == 'Fri']
+
+    # Calculate the 80th percentile of commuting times for each day of the week
+    mon_80 = mon_df['minutes_to_' + end].quantile(0.8)
+    tue_80 = tue_df['minutes_to_' + end].quantile(0.8)
+    wed_80 = wed_df['minutes_to_' + end].quantile(0.8)
+    thu_80 = thu_df['minutes_to_' + end].quantile(0.8)
+    fri_80 = fri_df['minutes_to_' + end].quantile(0.8)
+
+    if end == 'work':
+        print('80th percentile of commuting times for each day of the week:')
+        print(mon_80, tue_80, wed_80, thu_80, fri_80)
+        print('Depart by the following times to arrive by 9 am 80 percent of the time:')
+        mon_depart = 9 - (mon_80 / 60)
+        tue_depart = 9 - (tue_80 / 60)
+        wed_depart = 9 - (wed_80 / 60)
+        thu_depart = 9 - (thu_80 / 60)
+        fri_depart = 9 - (fri_80 / 60)
+        # format the time as HH:MM
+        mon_depart = ("%d:%02d" % (int(mon_depart), int((mon_depart*60) % 60))).format(mon_depart)
+        tue_depart = ("%d:%02d" % (int(tue_depart), int((tue_depart*60) % 60))).format(tue_depart)
+        wed_depart = ("%d:%02d" % (int(wed_depart), int((wed_depart*60) % 60))).format(wed_depart)
+        thu_depart = ("%d:%02d" % (int(thu_depart), int((thu_depart*60) % 60))).format(thu_depart)
+        fri_depart = ("%d:%02d" % (int(fri_depart), int((fri_depart*60) % 60))).format(fri_depart)
+        print(mon_depart, tue_depart, wed_depart, thu_depart, fri_depart)
