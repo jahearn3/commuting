@@ -301,6 +301,7 @@ def adaptive_spacing(df, start):
     # min_x_spacing = 1.0 / 12.0  # 1/12 hour = 5 minutes
     # min_x_spacing = 1.0 / 10.0  # 1/10 hour = 6 minutes
     min_x_spacing = 1.0 / 6.0  # 1/6 hour = 10 minutes
+    max_x_spacing = 1.0  # 1 hour
     count = 0 
     for i in range(1, len(t) - 1):
         if t[i] - t[i-1] < min_x_spacing:
@@ -318,7 +319,26 @@ def adaptive_spacing(df, start):
     if t[-1] < df[start + '_departure_time_hr'].max():
         t.append(df[start + '_departure_time_hr'].max())
 
+    # print(f"Before max loop: {len(t)}")
+
+    # Insert points when max_x_spacing is not met
+    t_temp = [t[0]]
+    for i in range(1, len(t)):
+        if t[i] - t[i-1] > 2 * max_x_spacing:
+            t_one_third = t[i-1] + ((t[i] - t[i-1]) / 3)
+            t_two_thirds = t[i-1] + ((t[i] - t[i-1]) * (2 / 3))
+            t_temp.append(t_one_third)
+            t_temp.append(t_two_thirds)
+        elif t[i] - t[i-1] > max_x_spacing:
+            t_halfway = (t[i] + t[i-1]) / 2
+            t_temp.append(t_halfway)
+        t_temp.append(t[i])
+
+    t = t_temp
     num = len(t)
+    # for i in range(num):
+    #     print(t[i])
+    # print(f"After max loop: {len(t)}")
     return t, num
 
 
