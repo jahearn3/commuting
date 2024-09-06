@@ -215,7 +215,7 @@ def duration_vs_departure(filename, df, start='home', end='work', gbr=False, dtr
         if show_extra_prediction_lines:
             ax.plot(x, y, c='chartreuse', label='Ensemble')
         else:
-            ax.plot(x, y, c='k', label='Prediction')
+            ax.plot(x, y, c='k', label='ML Prediction')
 
     if gbr or dtr or rfr or nn or xgb:
         plt.legend(bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0.)
