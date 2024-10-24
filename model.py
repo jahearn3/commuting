@@ -300,7 +300,10 @@ def adaptive_spacing(df, start):
     # Fewer points where data is too concentrated
     # min_x_spacing = 1.0 / 12.0  # 1/12 hour = 5 minutes
     # min_x_spacing = 1.0 / 10.0  # 1/10 hour = 6 minutes
-    min_x_spacing = 1.0 / 6.0  # 1/6 hour = 10 minutes
+    # min_x_spacing = 1.0 / 6.0  # 1/6 hour = 10 minutes
+    # min_x_spacing = 1.0 / 4.0  # 1/4 hour = 15 minutes
+    # min_x_spacing = 1.0 / 3.0  # 1/3 hour = 20 minutes
+    min_x_spacing = 1.0 / 2.0  # 1/2 hour = 30 minutes
     max_x_spacing = 1.0  # 1 hour
     count = 0 
     for i in range(1, len(t) - 1):
@@ -342,9 +345,35 @@ def adaptive_spacing(df, start):
     return t, num
 
 
+def percentile_spacing(df, start):
+    lo = 10
+    hi = 90
+    min_value = df[start + '_departure_time_hr'].min()
+    max_value = df[start + '_departure_time_hr'].max()
+    times = df[start + '_departure_time_hr'].dropna()
+    percentile_lo = times.quantile(lo / 100)
+    percentile_hi = times.quantile(hi / 100)
+    max_sep_1 = 0.8
+    max_sep_2 = 0.5
+    max_sep_3 = 0.8
+    num1 = max(3, int((percentile_lo - min_value) / max_sep_1))
+    num2 = max(3, int((percentile_hi - percentile_lo) / max_sep_2))
+    num3 = max(3, int((max_value - percentile_hi) / max_sep_3))
+    linspace_1 = np.linspace(min_value, percentile_lo, num1)
+    linspace_2 = np.linspace(percentile_lo, percentile_hi, num2)
+    linspace_3 = np.linspace(percentile_hi, max_value, num3)
+    combined_list = np.concatenate((linspace_1[:-1], linspace_2[:-1], linspace_3))
+    return combined_list.tolist()
+
+
 def prediction(reg, df, start, current_month=datetime.now().month):
-    t, num = adaptive_spacing(df, start)
+    # t, num = adaptive_spacing(df, start)
     # t, num = exponential_spacing(df, start)
+    t = percentile_spacing(df, start)
+    # Print spacing between points
+    num = len(t)
+    # num = 15
+    # t = np.linspace(df[start + '_departure_time_hr'].min(), df[start + '_departure_time_hr'].max(), num)
 
     current_quarter = (current_month - 1) // 3 + 1
 

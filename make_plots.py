@@ -11,6 +11,7 @@ from sklearn import ensemble
 import time
 import os
 import re 
+import scipy.interpolate as sci
 import textwrap 
 import warnings
 warnings.simplefilter(action='ignore', category=FutureWarning)
@@ -106,9 +107,16 @@ def duration_vs_departure(filename, df, start='home', end='work', gbr=False, dtr
         x_similar_max = df_similar_departure[start + '_departure_time_hr'].max()
         x_similar_min_hmm = ("%d:%02d" % (int(x_similar_min), int((x_similar_min*60) % 60))).format(x_similar_min)
         x_similar_max_hmm = ("%d:%02d" % (int(x_similar_max), int((x_similar_max*60) % 60))).format(x_similar_max)
-        percentile_text = f'The most recent trip departing {start} at {x_latest_hmm} took {int(y_latest)} minutes, which is faster than {percentile:.0%} of {len(df_similar_departure)} trips with departure times between {x_similar_min_hmm} and {x_similar_max_hmm}.'
+        percentile_text = f'The most recent trip departing \n{start} at {x_latest_hmm} took {int(y_latest)} minutes, \nwhich is '
+        if percentile == 0:
+            percentile_text += 'the slowest '
+        elif percentile == 100:
+            percentile_text += 'the fastest '
+        else:
+            percentile_text += f'faster than {percentile:.0%} '
+        percentile_text += f'of {len(df_similar_departure)} \ntrips with departure times \nbetween {x_similar_min_hmm} and {x_similar_max_hmm}.'
         print(percentile_text)
-        percentile_text = f'The most recent trip departing \n{start} at {x_latest_hmm} took {int(y_latest)} minutes, \nwhich is faster than {percentile:.0%} of {len(df_similar_departure)} \ntrips with departure times \nbetween {x_similar_min_hmm} and {x_similar_max_hmm}.'
+        # percentile_text = f'The most recent trip departing \n{start} at {x_latest_hmm} took {int(y_latest)} minutes, \nwhich is faster than {percentile:.0%} of {len(df_similar_departure)} \ntrips with departure times \nbetween {x_similar_min_hmm} and {x_similar_max_hmm}.'
         if annotate:
             ax.text(1.05, 0.25, percentile_text, fontsize=8, transform=ax.transAxes, verticalalignment='top')
 
@@ -215,7 +223,22 @@ def duration_vs_departure(filename, df, start='home', end='work', gbr=False, dtr
         if show_extra_prediction_lines:
             ax.plot(x, y, c='chartreuse', label='Ensemble')
         else:
+            # degree = 5
+            # coefficients = np.polyfit(x, y, degree)
+            # polynomial = np.poly1d(coefficients)
+            # x_new = np.linspace(x.min() - 2, x.max() + 2, 100)
+            # y_new = polynomial(x_new)
+            # remove any points less than x.min() or greater than x.max()
+            # x_new_cut = x_new[(x_new >= x.min()) & (x_new <= x.max())]
+            # y_new_cut = y_new[(x_new >= x.min()) & (x_new <= x.max())]
             ax.plot(x, y, c='k', label='ML Prediction')
+            # ax.plot(x_new_cut, y_new_cut, label='Smoothed ML Prediction')
+
+            # add a line that averages the ML prediction and smoothed ML prediction
+            # x_j = np.linspace(x.min(), x.max(), len(x))
+            # y_j = sci.interp1d(x_j, x)(np.linspace(x.min(), x.max(), len(x_new_cut)))
+            # avg_y = 1.82 * np.mean([y_j, y_new_cut], axis=0)
+            # ax.plot(x_new_cut, avg_y, c='r', label='Half-Smoothed ML Prediction')
 
     if gbr or dtr or rfr or nn or xgb:
         plt.legend(bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0.)
@@ -474,7 +497,7 @@ def arrival_times_over_time(plots_folder, start, end, df):
 
     if end == 'work':
         print('80th percentile of commuting times for each day of the week:')
-        print(mon_80, tue_80, wed_80, thu_80, fri_80)
+        print(round(mon_80, 1), round(tue_80, 1), round(wed_80, 1), round(thu_80, 1), round(fri_80, 1))
         print('Depart by the following times to arrive by 9 am 80 percent of the time:')
         mon_depart = 9 - (mon_80 / 60)
         tue_depart = 9 - (tue_80 / 60)
