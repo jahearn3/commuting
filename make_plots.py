@@ -128,12 +128,18 @@ def duration_vs_departure(filename, df, start='home', end='work', gbr=False, dtr
     sigma = 3 * df['minutes_to_' + end].std()
     ax.axhline(mean + sigma, color='gray', linestyle='dotted', label=r'Mean + $3\sigma$')
 
+    # Add diagonal line to indicate what time to depart to arrive on schedule
+    if end == 'work':
+        ax.plot([7, 8, 8 + (5/60)], [120, 60, 55], color='r', linestyle='dotted', label='Target Departure Time')
+    elif end == 'home':
+        ax.plot([16.5 - (10/60), 16.5, 17.5, 17.5 + (5/60)], [130, 120, 60, 55], color='r', linestyle='dotted', label='Target Departure Time')
+
     # Add comments near points
     if comments:
         for i, row in df.iterrows():
             try:
                 chars = len(str(row['comments_from_' + start + '_to_' + end]))
-                if(chars > 5):
+                if chars > 5:
                     wrapped_text = textwrap.fill(str(row['comments_from_' + start + '_to_' + end]), 25)
                     ax.text(row[start + '_departure_time_hr'], row['minutes_to_' + end], wrapped_text, fontsize=6)
             except KeyError:
