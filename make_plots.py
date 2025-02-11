@@ -101,7 +101,7 @@ def duration_vs_departure(filename, df, start='home', end='work', gbr=False, dtr
     # Print percentile of most recent trip compared to similar departure times
     df_similar_departure = df_subset[(df_subset[start + '_departure_time_hr'] > x_latest - 0.15) & (df_subset[start + '_departure_time_hr'] < x_latest + 0.15)]
     if len(df_similar_departure) > 1:
-        percentile = (df_similar_departure['minutes_to_' + end] > y_latest).sum() / len(df_similar_departure)
+        percentile = (df_similar_departure['minutes_to_' + end] > y_latest).sum() / (len(df_similar_departure) - 1)
         x_latest_hmm = ("%d:%02d" % (int(x_latest), int((x_latest*60) % 60))).format(x_latest)
         x_similar_min = df_similar_departure[start + '_departure_time_hr'].min()
         x_similar_max = df_similar_departure[start + '_departure_time_hr'].max()
@@ -110,7 +110,7 @@ def duration_vs_departure(filename, df, start='home', end='work', gbr=False, dtr
         percentile_text = f'The most recent trip departing \n{start} at {x_latest_hmm} took {int(y_latest)} minutes, \nwhich is '
         if percentile == 0:
             percentile_text += 'the slowest '
-        elif percentile == 100:
+        elif percentile == 1:
             percentile_text += 'the fastest '
         else:
             percentile_text += f'faster than {percentile:.0%} '
@@ -129,10 +129,10 @@ def duration_vs_departure(filename, df, start='home', end='work', gbr=False, dtr
     ax.axhline(mean + sigma, color='gray', linestyle='dotted', label=r'Mean + $3\sigma$')
 
     # Add diagonal line to indicate what time to depart to arrive on schedule
-    if end == 'work':
-        ax.plot([7, 8, 8 + (5/60)], [120, 60, 55], color='r', linestyle='dotted', label='Target Departure Time')
-    elif end == 'home':
-        ax.plot([16.5 - (10/60), 16.5, 17.5, 17.5 + (5/60)], [130, 120, 60, 55], color='r', linestyle='dotted', label='Target Departure Time')
+    # if end == 'work':
+    #     ax.plot([7, 8, 8 + (5/60)], [120, 60, 55], color='r', linestyle='dotted', label='Target Departure Time')
+    # elif end == 'home':
+    #     ax.plot([16.5 - (10/60), 16.5, 17.5, 17.5 + (5/60)], [130, 120, 60, 55], color='r', linestyle='dotted', label='Target Departure Time')
 
     # Add comments near points
     if comments:
