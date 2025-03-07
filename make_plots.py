@@ -8,6 +8,7 @@ from statsmodels.formula.api import ols
 from sklearn.metrics import mean_squared_error as MSE
 from sklearn.inspection import permutation_importance 
 from sklearn import ensemble
+import math
 import time
 import os
 import re 
@@ -73,10 +74,24 @@ def plot_feature_importance(plots_folder, start, end, reg, X_test, y_test, df):
 
 def time_xticks(ax, earliest_departure, latest_departure):
     # Change x-axis ticks from decimal form to HH:MM form
-    ax.xaxis.set_major_locator(ticker.MaxNLocator(10, steps=[1, 5, 10]))
-    ticks_loc = ax.get_xticks().tolist()
-    ax.xaxis.set_major_locator(ticker.FixedLocator(ticks_loc))
-    ax.set_xticklabels([("%d:%02d" % (int(x), int((x*60) % 60))).format(x) for x in ticks_loc])
+    # ax.xaxis.set_major_locator(ticker.MaxNLocator(steps=[1]))
+    # ticks_loc = ax.get_xticks().tolist()
+    # ax.xaxis.set_major_locator(ticker.FixedLocator(ticks_loc))
+    # ax.set_xticklabels([("%d:%02d" % (int(x), int((x*60) % 60))).format(x) for x in ticks_loc])
+
+    start_hour = math.floor(earliest_departure)
+    end_hour = math.ceil(latest_departure)
+    ax.set_xticks(range(start_hour, end_hour + 1, 1))  # Set ticks every hour
+    ax.set_xticklabels([f"{h}:00" for h in range(start_hour, end_hour + 1)])  # Set x-tick labels to HH:MM format
+    # Rotate x-tick labels if crowded
+    max_ticks = 10  # Set a threshold for the number of ticks
+    ticks_loc = ax.get_xticks()
+
+    if len(ticks_loc) > max_ticks:
+        plt.xticks(rotation=45)
+    else:
+        plt.xticks(rotation=0)  # Reset rotation if not crowded
+
 
     # Ensure axis bounds are good (GradientBoostingRegressor fit lines include some weird vertical lines way off to the left)
     ax.set_xlim(earliest_departure - 0.1, latest_departure + 0.1)
