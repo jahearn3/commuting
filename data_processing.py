@@ -37,6 +37,8 @@ def process_data(filename='commuting_data.csv'):
         df['home_departure_time_hr'] = (df['home_departure_time'] - pd.to_datetime(df['date'] + ' ' + str(midnight))).dt.total_seconds()/(60*60)
         df['mileage_to_work'] = df['work_arrival_mileage'] - df['home_departure_mileage']
         df['work_arrival_time_hr'] = (df['work_arrival_time'] - pd.to_datetime(df['date'] + ' ' + str(midnight))).dt.total_seconds()/(60*60)
+        # Subtract 4 minutes from 'minutes_to_work' if 'gas' appears in that row under the column 'comments_from_home_to_work'
+        df.loc[df['comments_from_home_to_work'].str.contains('gas', na=False), 'minutes_to_work'] -= 4
     if 'home_arrival_time' in df.columns:
         start = 'work'
         end = 'home'
@@ -44,6 +46,8 @@ def process_data(filename='commuting_data.csv'):
         df['work_departure_time_hr'] = (df['work_departure_time'] - pd.to_datetime(df['date'] + ' ' + str(midnight))).dt.total_seconds()/(60*60)
         df['mileage_to_home'] = df['home_arrival_mileage'] - df['work_departure_mileage']
         df['home_arrival_time_hr'] = (df['home_arrival_time'] - pd.to_datetime(df['date'] + ' ' + str(midnight))).dt.total_seconds()/(60*60)
+        # Subtract 4 minutes from 'minutes_to_home' if 'gas' appears in that row under the column 'comments_from_work_to_home'
+        df.loc[df['comments_from_work_to_home'].str.contains('gas', na=False), 'minutes_to_home'] -= 4
 
     # Adding column for month to help explore seasonality in the data
     df['date'] = pd.to_datetime(df['date'])
