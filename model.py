@@ -183,29 +183,6 @@ def fit_rfr(X_train, X_test, y_train, y_test):
     # rf = RandomForestRegressor(n_estimators = 300, max_features = 'sqrt', max_depth = 5, random_state = 18)
     rf.fit(X_train, y_train)
     mse = compute_mse(rf, 'RFR', X_train, X_test, y_train, y_test)
-
-    ## Using GridSearchCV to find the best params: this works but takes a few minutes to run 
-    ## Define Grid 
-    # grid = { 
-    #     'n_estimators': [200,300,400,500],
-    #     'max_features': ['sqrt','log2'],
-    #     'max_depth' : [3,4,5,6,7],
-    #     'random_state' : [18]
-    # }
-    # ## show start time
-    # # print(datetime.now())
-    # ## Grid Search function
-    # CV_rfr = GridSearchCV(estimator=RandomForestRegressor(), param_grid=grid, cv= 5)
-    # CV_rfr.fit(X_train, y_train)
-    # mse = MSE(y_test, CV_rfr.predict(X_test))
-    # print(f'CVRFR mean squared error (MSE) on test set: {mse}')
-    # ## show end time
-    # # print(datetime.now())
-    # print('Best params: ')
-    # print(CV_rfr.best_params_)
-    # Best params: 
-    # {'max_depth': 3, 'max_features': 'sqrt', 'n_estimators': 200, 'random_state': 18}
-
     return rf, mse
 
 
@@ -363,14 +340,34 @@ def percentile_spacing(df, start):
     linspace_2 = np.linspace(percentile_lo, percentile_hi, num2)
     linspace_3 = np.linspace(percentile_hi, max_value, num3)
     combined_list = np.concatenate((linspace_1[:-1], linspace_2[:-1], linspace_3))
-    return combined_list.tolist()
+    combined_list = combined_list.tolist()
+    combined_list_mean = sum(combined_list) / len(combined_list)
+    adjusted_list = [combined_list[0]]
+    for i in range(1, len(combined_list)):
+        current = combined_list[i]
+        previous = adjusted_list[-1]
+        # Check the spacing between the previous and current elements
+        if current - previous < max_sep_2:
+            # Decide which element to remove based on the mean
+            if previous < combined_list_mean:
+                # Remove the second of the pair (current)
+                continue  # Do not add current to adjusted_list
+            else:
+                # Remove the first of the pair (previous)
+                adjusted_list.pop()  # Remove the last added element (previous)
+        # If spacing is sufficient, add current to adjusted_list
+        adjusted_list.append(current)
+
+    return adjusted_list
 
 
-def prediction(reg, df, start, current_month=datetime.now().month):
-    # t, num = adaptive_spacing(df, start)
-    # t, num = exponential_spacing(df, start)
-    t = percentile_spacing(df, start)
-    # Print spacing between points
+def prediction(reg, df, start, current_month=datetime.now().month, spacing='percentile'):
+    if spacing == 'adaptive':
+        t, num = adaptive_spacing(df, start)
+    elif spacing == 'exponential':
+        t, num = exponential_spacing(df, start)
+    elif spacing == 'percentile':
+        t = percentile_spacing(df, start)
     num = len(t)
     # num = 15
     # t = np.linspace(df[start + '_departure_time_hr'].min(), df[start + '_departure_time_hr'].max(), num)
