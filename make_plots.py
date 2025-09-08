@@ -1,24 +1,25 @@
 import seaborn as sns
 import matplotlib.pyplot as plt
-import matplotlib.ticker as ticker
-import matplotlib.cm as cm
-import numpy as np 
-import pandas as pd 
-from statsmodels.formula.api import ols
-from sklearn.metrics import mean_squared_error as MSE
-from sklearn.inspection import permutation_importance 
-from sklearn import ensemble
+# import matplotlib.ticker as ticker
+# import matplotlib.cm as cm
+import numpy as np
+# import pandas as pd
+# from statsmodels.formula.api import ols
+# from sklearn.metrics import mean_squared_error as MSE
+from sklearn.inspection import permutation_importance
+# from sklearn import ensemble
 import math
 import time
 import os
-import re 
-import scipy.interpolate as sci
-import textwrap 
+import re
+# import scipy.interpolate as sci
+import textwrap
 import warnings
-warnings.simplefilter(action='ignore', category=FutureWarning)
+import model
+import data_processing as dp
 
-import model 
-import data_processing as dp 
+
+warnings.simplefilter(action='ignore', category=FutureWarning)
 
 
 def plot_residuals(plots_folder, start, end, df):
@@ -129,7 +130,7 @@ def duration_vs_departure(filename, df, start='home', end='work', gbr=False, dtr
             percentile_text += 'the fastest '
         else:
             percentile_text += f'faster than {percentile:.0%} '
-        percentile_text += f'of {len(df_similar_departure)} \ntrips with departure times \nbetween {x_similar_min_hmm} and {x_similar_max_hmm}.'
+        percentile_text += f'of {len(df_similar_departure)-1} \ntrips with departure times \nbetween {x_similar_min_hmm} and {x_similar_max_hmm}.'
         print(percentile_text)
         # percentile_text = f'The most recent trip departing \n{start} at {x_latest_hmm} took {int(y_latest)} minutes, \nwhich is faster than {percentile:.0%} of {len(df_similar_departure)} \ntrips with departure times \nbetween {x_similar_min_hmm} and {x_similar_max_hmm}.'
         if annotate:
