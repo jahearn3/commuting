@@ -100,19 +100,54 @@ def time_xticks(ax, earliest_departure, latest_departure):
 
 
 def duration_vs_departure(filename, df, start='home', end='work', gbr=False, dtr=False, rfr=False, nn=False, xgb=False, ensemble_r=False, comments=False, annotate=True, show_extra_prediction_lines=False):
-    fig = plt.figure()
+    # fig = plt.figure()
+
+    # Create two subplots, stacked vertically, sharing x-axis
+    fig, (ax_upper, ax_lower) = plt.subplots(2, 1, sharex=True, figsize=(8, 6), gridspec_kw={'height_ratios': [1, 5], 'hspace': 0})
+
     # Apply the default theme
     sns.set_theme()
 
     # Initialize the visualization
-    ax = sns.scatterplot(data=df, x=start + '_departure_time_hr', y='minutes_to_' + end, hue='day_of_week', hue_order=['Mon', 'Tue', 'Wed', 'Thu', 'Fri'], s=1)
+    # ax = sns.scatterplot(data=df, x=start + '_departure_time_hr', y='minutes_to_' + end, hue='day_of_week', hue_order=['Mon', 'Tue', 'Wed', 'Thu', 'Fri'], s=1)
+    sns.scatterplot(data=df, x=start + '_departure_time_hr', y='minutes_to_' + end, hue='day_of_week', hue_order=['Mon', 'Tue', 'Wed', 'Thu', 'Fri'], s=1, ax=ax_lower)
+    sns.scatterplot(data=df, x=start + '_departure_time_hr', y='minutes_to_' + end, hue='day_of_week', hue_order=['Mon', 'Tue', 'Wed', 'Thu', 'Fri'], s=1, ax=ax_upper, legend=False)
+
+    # Hide the spines between ax_lower and ax_upper
+    ax_lower.spines['top'].set_visible(False)
+    ax_upper.spines['bottom'].set_visible(False)
+
+    # Remove x tick labels from the upper plot
+    ax_upper.tick_params(labelbottom=False)
+
+    # Add diagonal lines to indicate the break
+    d = .015  # size of diagonal lines in axes coordinates
+    kwargs = dict(transform=ax_lower.transAxes, color='k', clip_on=False)
+    ax_lower.plot((-d, +d), (1 - d, 1 + d), **kwargs)        # top-left diagonal
+    ax_lower.plot((1 - d, 1 + d), (1 - d, 1 + d), **kwargs)  # top-right diagonal
+
+    # kwargs.update(transform=ax_upper.transAxes)  # switch to the upper axes
+    # ax_upper.plot((-d, +d), (-d, +d), **kwargs)              # bottom-left diagonal
+    # ax_upper.plot((1 - d, 1 + d), (-d, +d), **kwargs)        # bottom-right diagonal
+
+    # Get the legend handles and labels (to enlarge the legend scatter points later on)
+    # handles, labels = ax.get_legend_handles_labels()
+    handles, labels = ax_upper.get_legend_handles_labels()
 
     # Highlight the most recent trip by putting a yellow halo around it
     df_subset = df[[start + '_departure_time_hr', 'minutes_to_' + end]]
     df_subset = df_subset.dropna()
     x_latest = df_subset[start + '_departure_time_hr'][df_subset.index[-1]]
     y_latest = df_subset['minutes_to_' + end][df_subset.index[-1]]
-    ax.scatter(x_latest, y_latest, c='#FFFF14', s=100)
+    # ax.scatter(x_latest, y_latest, c='#FFFF14', s=100)
+    ax_lower.scatter(x_latest, y_latest, c='#FFFF14', s=100)
+    ax_upper.scatter(x_latest, y_latest, c='#FFFF14', s=100)
+
+    # Calculate the deviation of the most recent trip
+    mu = df['minutes_to_' + end].mean()
+    sigma = df['minutes_to_' + end].std()
+    z = (y_latest - mu) / sigma if sigma else 0
+    print(f"Z-score of the most recent trip: {z:.2f}")
 
     # Print percentile of most recent trip compared to similar departure times
     df_similar_departure = df_subset[(df_subset[start + '_departure_time_hr'] > x_latest - 0.15) & (df_subset[start + '_departure_time_hr'] < x_latest + 0.15)]
@@ -134,15 +169,28 @@ def duration_vs_departure(filename, df, start='home', end='work', gbr=False, dtr
         print(percentile_text)
         # percentile_text = f'The most recent trip departing \n{start} at {x_latest_hmm} took {int(y_latest)} minutes, \nwhich is faster than {percentile:.0%} of {len(df_similar_departure)} \ntrips with departure times \nbetween {x_similar_min_hmm} and {x_similar_max_hmm}.'
         if annotate:
-            ax.text(1.05, 0.25, percentile_text, fontsize=8, transform=ax.transAxes, verticalalignment='top')
+            # ax.text(1.05, 0.25, percentile_text, fontsize=8, transform=ax.transAxes, verticalalignment='top')
+            ax_lower.text(1.05, 0.25, percentile_text, fontsize=8, transform=ax_lower.transAxes, verticalalignment='top')
 
     # Add horizontal line at mean 
     mean = df['minutes_to_' + end].mean()
-    ax.axhline(mean, color='c', linestyle='dotted', label='Mean')
+    # ax.axhline(mean, color='c', linestyle='dotted', label='Mean')
+    ax_lower.axhline(mean, color='c', linestyle='dotted', label='Mean')
 
     # Add horizontal line at 3 * sigma
-    sigma = 3 * df['minutes_to_' + end].std()
-    ax.axhline(mean + sigma, color='gray', linestyle='dotted', label=r'Mean + $3\sigma$')
+    three_sigma = 3 * df['minutes_to_' + end].std()
+    plot_split = 1.75 * df['minutes_to_' + end].std()
+    # ax.axhline(mean + three_sigma, color='gray', linestyle='dotted', label=r'Mean + $3\sigma$')
+    ax_upper.axhline(mean + three_sigma, color='gray', linestyle='dotted')
+    ax_lower.axhline(mean + three_sigma, color='gray', linestyle='dotted', label=r'Mean + $3\sigma$') # This line does not show up but the label is needed for the legend
+
+    # Get y-limits
+    y_lower_min, y_upper_max = ax_lower.get_ylim()
+    print("y-limits:", (y_lower_min, y_upper_max))
+
+    # Set y-limits
+    ax_lower.set_ylim(y_lower_min, mean + plot_split)
+    ax_upper.set_ylim(mean + plot_split, y_upper_max)
 
     # Add diagonal line to indicate what time to depart to arrive on schedule
     # if end == 'work':
@@ -157,18 +205,26 @@ def duration_vs_departure(filename, df, start='home', end='work', gbr=False, dtr
                 chars = len(str(row['comments_from_' + start + '_to_' + end]))
                 if chars > 5:
                     wrapped_text = textwrap.fill(str(row['comments_from_' + start + '_to_' + end]), 25)
-                    ax.text(row[start + '_departure_time_hr'], row['minutes_to_' + end], wrapped_text, fontsize=6)
+                    # ax.text(row[start + '_departure_time_hr'], row['minutes_to_' + end], wrapped_text, fontsize=6)
+                    ax_lower.text(row[start + '_departure_time_hr'], row['minutes_to_' + end], wrapped_text, fontsize=6)
+                    ax_upper.text(row[start + '_departure_time_hr'], row['minutes_to_' + end], wrapped_text, fontsize=6)
             except KeyError:
                 print('Key Error. Skipping the labeling of points.')
 
     # Add size of scatter points by mileage, but don't add mileage to the legend
-    ax = sns.scatterplot(data=df, x=start + '_departure_time_hr', y='minutes_to_' + end, hue='day_of_week', hue_order=['Mon', 'Tue', 'Wed', 'Thu', 'Fri'], size='mileage_to_' + end, legend=False) # to plot the scatter points colored by day of the week
-    ax = time_xticks(ax, df[start + '_departure_time_hr'].min(), df[start + '_departure_time_hr'].max())
+    # ax = sns.scatterplot(data=df, x=start + '_departure_time_hr', y='minutes_to_' + end, hue='day_of_week', hue_order=['Mon', 'Tue', 'Wed', 'Thu', 'Fri'], size='mileage_to_' + end, legend=False) # to plot the scatter points colored by day of the week
+    # ax = time_xticks(ax, df[start + '_departure_time_hr'].min(), df[start + '_departure_time_hr'].max())
+    ax_lower = sns.scatterplot(data=df, x=start + '_departure_time_hr', y='minutes_to_' + end, hue='day_of_week', hue_order=['Mon', 'Tue', 'Wed', 'Thu', 'Fri'], size='mileage_to_' + end, legend=False, ax=ax_lower) # to plot the scatter points colored by day of the week
+    ax_upper = sns.scatterplot(data=df, x=start + '_departure_time_hr', y='minutes_to_' + end, hue='day_of_week', hue_order=['Mon', 'Tue', 'Wed', 'Thu', 'Fri'], size='mileage_to_' + end, legend=False, ax=ax_upper) # to plot the scatter points colored by day of the week
+    ax_lower = time_xticks(ax_lower, df[start + '_departure_time_hr'].min(), df[start + '_departure_time_hr'].max())
+    ax_upper = time_xticks(ax_upper, df[start + '_departure_time_hr'].min(), df[start + '_departure_time_hr'].max())
 
     # Practice with statsmodels
     x, y = model.linear_prediction_from_statsmodels(df, start, end)
     if show_extra_prediction_lines:
-        ax.plot(x, y, c='b', label='Linear', linestyle='dotted')
+        # ax.plot(x, y, c='b', label='Linear', linestyle='dotted')
+        ax_lower.plot(x, y, c='b', label='Linear', linestyle='dotted')
+        ax_upper.plot(x, y, c='b', label='Linear', linestyle='dotted')
 
     # TODO: Consider filtering out outliers using the 3 sigma from linear fit line instead of the 3 sigma from the mean line
     # ax.plot(x, y, c='b', label='Linear', linestyle='dotted')
@@ -190,7 +246,9 @@ def duration_vs_departure(filename, df, start='home', end='work', gbr=False, dtr
         x, y = model.prediction(gbreg, df, start)
         print("GBR --- %s seconds ---" % (time.time() - start_time))
         if show_extra_prediction_lines:
-            ax.plot(x, y, c='c', label='Gradient Boosting')
+            # ax.plot(x, y, c='c', label='Gradient Boosting')
+            ax_lower.plot(x, y, c='c', label='Gradient Boosting')
+            ax_upper.plot(x, y, c='c', label='Gradient Boosting')
     if dtr:
         start_time = time.time()
         # dtreg, mse = model.fit_dtr(X_train, X_test, y_train, y_test)
@@ -199,7 +257,9 @@ def duration_vs_departure(filename, df, start='home', end='work', gbr=False, dtr
         x, y = model.prediction(dtreg, df, start)
         print("DTR --- %s seconds ---" % (time.time() - start_time))
         if show_extra_prediction_lines:
-            ax.plot(x, y, c='g', label='Decision Tree')
+            # ax.plot(x, y, c='g', label='Decision Tree')
+            ax_lower.plot(x, y, c='g', label='Decision Tree')
+            ax_upper.plot(x, y, c='g', label='Decision Tree')
     if rfr:
         start_time = time.time()
         # rfreg, mse = model.fit_rfr(X_train, X_test, y_train, y_test)
@@ -208,14 +268,18 @@ def duration_vs_departure(filename, df, start='home', end='work', gbr=False, dtr
         x, y = model.prediction(rfreg, df, start)
         print("RFR --- %s seconds ---" % (time.time() - start_time))
         if show_extra_prediction_lines:
-            ax.plot(x, y, c='m', label='Random Forest')
+            # ax.plot(x, y, c='m', label='Random Forest')
+            ax_lower.plot(x, y, c='m', label='Random Forest')
+            ax_upper.plot(x, y, c='m', label='Random Forest')
     if nn:
         start_time = time.time()
         nnreg, mse = model.fit_nn(X_train, X_test, y_train, y_test)
         x, y = model.prediction(nnreg, df, start)
         print("NN --- %s seconds ---" % (time.time() - start_time))
         if show_extra_prediction_lines:
-            ax.plot(x, y, c='orange', label='Neural Network')
+            # ax.plot(x, y, c='orange', label='Neural Network')
+            ax_lower.plot(x, y, c='orange', label='Neural Network')
+            ax_upper.plot(x, y, c='orange', label='Neural Network')
     if xgb:
         start_time = time.time()
         # xgbreg, mse = model.fit_xgbr(X_train, X_test, y_train, y_test)
@@ -224,7 +288,9 @@ def duration_vs_departure(filename, df, start='home', end='work', gbr=False, dtr
         x, y = model.prediction(xgbreg, df, start)
         print("XGB --- %s seconds ---" % (time.time() - start_time))
         if show_extra_prediction_lines:
-            ax.plot(x, y, c='k', label='XGBoost')
+            # ax.plot(x, y, c='k', label='XGBoost')
+            ax_lower.plot(x, y, c='k', label='XGBoost')
+            ax_upper.plot(x, y, c='k', label='XGBoost')
 
     if ensemble_r:
         start_time = time.time()
@@ -243,7 +309,9 @@ def duration_vs_departure(filename, df, start='home', end='work', gbr=False, dtr
         x, y = model.prediction(ensmbl, df, start)
         print("Ensemble --- %s seconds ---" % (time.time() - start_time))
         if show_extra_prediction_lines:
-            ax.plot(x, y, c='chartreuse', label='Ensemble')
+            # ax.plot(x, y, c='chartreuse', label='Ensemble')
+            ax_lower.plot(x, y, c='chartreuse', label='Ensemble')
+            ax_upper.plot(x, y, c='chartreuse', label='Ensemble')
         else:
             # degree = 5
             # coefficients = np.polyfit(x, y, degree)
@@ -253,7 +321,9 @@ def duration_vs_departure(filename, df, start='home', end='work', gbr=False, dtr
             # remove any points less than x.min() or greater than x.max()
             # x_new_cut = x_new[(x_new >= x.min()) & (x_new <= x.max())]
             # y_new_cut = y_new[(x_new >= x.min()) & (x_new <= x.max())]
-            ax.plot(x, y, c='k', label='ML Prediction')
+            # ax.plot(x, y, c='k', label='ML Prediction')
+            ax_lower.plot(x, y, c='k', label='ML Prediction')
+            ax_upper.plot(x, y, c='k', label='ML Prediction')
             # ax.plot(x_new_cut, y_new_cut, label='Smoothed ML Prediction')
 
             # add a line that averages the ML prediction and smoothed ML prediction
@@ -263,11 +333,18 @@ def duration_vs_departure(filename, df, start='home', end='work', gbr=False, dtr
             # ax.plot(x_new_cut, avg_y, c='r', label='Half-Smoothed ML Prediction')
 
     if gbr or dtr or rfr or nn or xgb:
-        plt.legend(bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0.)
+        # Create a new legend with larger markers
+        plt.legend(handles=handles, labels=labels, markerscale=5, bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0.)
 
     # Specfiy axis labels
-    ax.set(xlabel=start.capitalize() + ' Departure Time',
+    # ax.set(xlabel=start.capitalize() + ' Departure Time',
+    #    ylabel='Minutes to ' + end.capitalize(),
+    #    title='Commuting Time')
+    ax_lower.set(xlabel=start.capitalize() + ' Departure Time',
        ylabel='Minutes to ' + end.capitalize(),
+       title='')
+    ax_upper.set(xlabel='',
+       ylabel='',
        title='Commuting Time')
 
     # Make directory for plots if it doesn't already exist
