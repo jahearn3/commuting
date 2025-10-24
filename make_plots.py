@@ -102,16 +102,23 @@ def time_xticks(ax, earliest_departure, latest_departure):
 def duration_vs_departure(filename, df, start='home', end='work', gbr=False, dtr=False, rfr=False, nn=False, xgb=False, ensemble_r=False, comments=False, annotate=True, show_extra_prediction_lines=False):
     # fig = plt.figure()
 
+    mean = df['minutes_to_' + end].mean()
+    three_sigma = 3 * df['minutes_to_' + end].std()
+    plot_split = 1.5 * df['minutes_to_' + end].std()
+
+    lower_mask = df['minutes_to_' + end] <  mean + plot_split
+    upper_mask = df['minutes_to_' + end] >= mean + plot_split
+
     # Create two subplots, stacked vertically, sharing x-axis
-    fig, (ax_upper, ax_lower) = plt.subplots(2, 1, sharex=True, figsize=(8, 6), gridspec_kw={'height_ratios': [1, 5], 'hspace': 0})
+    fig, (ax_upper, ax_lower) = plt.subplots(2, 1, sharex=True, figsize=(8, 6), gridspec_kw={'height_ratios': [1, 5], 'hspace': 0.0})
 
     # Apply the default theme
-    sns.set_theme()
+    # sns.set_theme()
 
     # Initialize the visualization
     # ax = sns.scatterplot(data=df, x=start + '_departure_time_hr', y='minutes_to_' + end, hue='day_of_week', hue_order=['Mon', 'Tue', 'Wed', 'Thu', 'Fri'], s=1)
-    sns.scatterplot(data=df, x=start + '_departure_time_hr', y='minutes_to_' + end, hue='day_of_week', hue_order=['Mon', 'Tue', 'Wed', 'Thu', 'Fri'], s=1, ax=ax_lower)
-    sns.scatterplot(data=df, x=start + '_departure_time_hr', y='minutes_to_' + end, hue='day_of_week', hue_order=['Mon', 'Tue', 'Wed', 'Thu', 'Fri'], s=1, ax=ax_upper, legend=False)
+    sns.scatterplot(data=df[lower_mask], x=start + '_departure_time_hr', y='minutes_to_' + end, hue='day_of_week', hue_order=['Mon', 'Tue', 'Wed', 'Thu', 'Fri'], s=1, ax=ax_lower)
+    sns.scatterplot(data=df[upper_mask], x=start + '_departure_time_hr', y='minutes_to_' + end, hue='day_of_week', hue_order=['Mon', 'Tue', 'Wed', 'Thu', 'Fri'], s=1, ax=ax_upper, legend=False)
 
     # Hide the spines between ax_lower and ax_upper
     ax_lower.spines['top'].set_visible(False)
@@ -173,24 +180,22 @@ def duration_vs_departure(filename, df, start='home', end='work', gbr=False, dtr
             ax_lower.text(1.05, 0.25, percentile_text, fontsize=8, transform=ax_lower.transAxes, verticalalignment='top')
 
     # Add horizontal line at mean 
-    mean = df['minutes_to_' + end].mean()
     # ax.axhline(mean, color='c', linestyle='dotted', label='Mean')
     ax_lower.axhline(mean, color='c', linestyle='dotted', label='Mean')
 
     # Add horizontal line at 3 * sigma
-    three_sigma = 3 * df['minutes_to_' + end].std()
-    plot_split = 1.75 * df['minutes_to_' + end].std()
     # ax.axhline(mean + three_sigma, color='gray', linestyle='dotted', label=r'Mean + $3\sigma$')
     ax_upper.axhline(mean + three_sigma, color='gray', linestyle='dotted')
     ax_lower.axhline(mean + three_sigma, color='gray', linestyle='dotted', label=r'Mean + $3\sigma$') # This line does not show up but the label is needed for the legend
 
-    # Get y-limits
-    y_lower_min, y_upper_max = ax_lower.get_ylim()
-    print("y-limits:", (y_lower_min, y_upper_max))
-
     # Set y-limits
-    ax_lower.set_ylim(y_lower_min, mean + plot_split)
-    ax_upper.set_ylim(mean + plot_split, y_upper_max)
+    y_lower_min = df['minutes_to_' + end].min() - 1
+    y_upper_max = df['minutes_to_' + end].max() + 2
+    print("y-extrema:", (df['minutes_to_' + end].min(), df['minutes_to_' + end].max()))
+    print("y-limits:", (y_lower_min, y_upper_max))
+    gap = -1
+    ax_lower.set_ylim(y_lower_min, mean + plot_split - gap)
+    ax_upper.set_ylim(mean + plot_split + gap, y_upper_max)
 
     # Add diagonal line to indicate what time to depart to arrive on schedule
     # if end == 'work':
@@ -214,8 +219,8 @@ def duration_vs_departure(filename, df, start='home', end='work', gbr=False, dtr
     # Add size of scatter points by mileage, but don't add mileage to the legend
     # ax = sns.scatterplot(data=df, x=start + '_departure_time_hr', y='minutes_to_' + end, hue='day_of_week', hue_order=['Mon', 'Tue', 'Wed', 'Thu', 'Fri'], size='mileage_to_' + end, legend=False) # to plot the scatter points colored by day of the week
     # ax = time_xticks(ax, df[start + '_departure_time_hr'].min(), df[start + '_departure_time_hr'].max())
-    ax_lower = sns.scatterplot(data=df, x=start + '_departure_time_hr', y='minutes_to_' + end, hue='day_of_week', hue_order=['Mon', 'Tue', 'Wed', 'Thu', 'Fri'], size='mileage_to_' + end, legend=False, ax=ax_lower) # to plot the scatter points colored by day of the week
-    ax_upper = sns.scatterplot(data=df, x=start + '_departure_time_hr', y='minutes_to_' + end, hue='day_of_week', hue_order=['Mon', 'Tue', 'Wed', 'Thu', 'Fri'], size='mileage_to_' + end, legend=False, ax=ax_upper) # to plot the scatter points colored by day of the week
+    ax_lower = sns.scatterplot(data=df[lower_mask], x=start + '_departure_time_hr', y='minutes_to_' + end, hue='day_of_week', hue_order=['Mon', 'Tue', 'Wed', 'Thu', 'Fri'], size='mileage_to_' + end, legend=False, ax=ax_lower) # to plot the scatter points colored by day of the week
+    ax_upper = sns.scatterplot(data=df[upper_mask], x=start + '_departure_time_hr', y='minutes_to_' + end, hue='day_of_week', hue_order=['Mon', 'Tue', 'Wed', 'Thu', 'Fri'], size='mileage_to_' + end, legend=False, ax=ax_upper) # to plot the scatter points colored by day of the week
     ax_lower = time_xticks(ax_lower, df[start + '_departure_time_hr'].min(), df[start + '_departure_time_hr'].max())
     ax_upper = time_xticks(ax_upper, df[start + '_departure_time_hr'].min(), df[start + '_departure_time_hr'].max())
 
@@ -234,9 +239,9 @@ def duration_vs_departure(filename, df, start='home', end='work', gbr=False, dtr
     if gbr or dtr or rfr or nn or xgb:
         X_train, X_test, y_train, y_test = dp.preprocess_data(start, end, df)
         print(f'shape of X_train: {X_train.shape}')
-        print(f'shape of y_train: {y_train.shape}')
+        # print(f'shape of y_train: {y_train.shape}')
         print(f'shape of X_test: {X_test.shape}')
-        print(f'shape of y_test: {y_test.shape}')
+        # print(f'shape of y_test: {y_test.shape}')
 
     if gbr:
         start_time = time.time()
