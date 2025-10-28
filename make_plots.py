@@ -102,6 +102,9 @@ def time_xticks(ax, earliest_departure, latest_departure):
 def duration_vs_departure(filename, df, start='home', end='work', gbr=False, dtr=False, rfr=False, nn=False, xgb=False, ensemble_r=False, comments=False, annotate=True, show_extra_prediction_lines=False):
     # fig = plt.figure()
 
+    plt.style.use('default')
+    sns.reset_orig()
+
     mean = df['minutes_to_' + end].mean()
     three_sigma = 3 * df['minutes_to_' + end].std()
     plot_split = 1.5 * df['minutes_to_' + end].std()
@@ -113,7 +116,7 @@ def duration_vs_departure(filename, df, start='home', end='work', gbr=False, dtr
     fig, (ax_upper, ax_lower) = plt.subplots(2, 1, sharex=True, figsize=(8, 6), gridspec_kw={'height_ratios': [1, 5], 'hspace': 0.0})
 
     # Apply the default theme
-    # sns.set_theme()
+    sns.set_theme(style='white')
 
     # Initialize the visualization
     # ax = sns.scatterplot(data=df, x=start + '_departure_time_hr', y='minutes_to_' + end, hue='day_of_week', hue_order=['Mon', 'Tue', 'Wed', 'Thu', 'Fri'], s=1)
@@ -190,10 +193,13 @@ def duration_vs_departure(filename, df, start='home', end='work', gbr=False, dtr
 
     # Set y-limits
     y_lower_min = df['minutes_to_' + end].min() - 1
-    y_upper_max = df['minutes_to_' + end].max() + 2
+    y_upper_max = df['minutes_to_' + end].max() + 4
     print("y-extrema:", (df['minutes_to_' + end].min(), df['minutes_to_' + end].max()))
     print("y-limits:", (y_lower_min, y_upper_max))
-    gap = -1
+    if end == 'home':
+        gap = -1
+    else:
+        gap = -3
     ax_lower.set_ylim(y_lower_min, mean + plot_split - gap)
     ax_upper.set_ylim(mean + plot_split + gap, y_upper_max)
 
@@ -345,12 +351,21 @@ def duration_vs_departure(filename, df, start='home', end='work', gbr=False, dtr
     # ax.set(xlabel=start.capitalize() + ' Departure Time',
     #    ylabel='Minutes to ' + end.capitalize(),
     #    title='Commuting Time')
-    ax_lower.set(xlabel=start.capitalize() + ' Departure Time',
-       ylabel='Minutes to ' + end.capitalize(),
-       title='')
-    ax_upper.set(xlabel='',
-       ylabel='',
-       title='Commuting Time')
+    ax_lower.set(xlabel=start.capitalize() + ' Departure Time', ylabel='Minutes to ' + end.capitalize(), title='')
+    ax_upper.set(xlabel='', ylabel='', title='Commuting Time')
+
+    # labels = ax_lower.get_yticklabels()
+    # if labels:
+    #     labels[-1].set_visible(False)  # Hide the top y-tick label
+
+    yticks = ax_lower.get_yticks()
+    print('yticks:', yticks)
+    # Remove the max tick (last one)
+    if end == 'home':
+        yticks = yticks[:-1]
+    else:
+        yticks = yticks[:-2]
+    ax_lower.set_yticks(yticks)
 
     # Make directory for plots if it doesn't already exist
     pattern = r'_(.*)\.csv'
