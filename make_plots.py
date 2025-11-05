@@ -89,26 +89,46 @@ def plot_feature_importance(plots_folder, start, end, reg, X_test, y_test, df):
 
 
 def time_xticks(ax, earliest_departure, latest_departure):
-    '''Change x-axis ticks from decimal form to HH:MM form'''
+    '''Change x-axis ticks from decimal form to 12-hour HH:MM AM/PM format,
+    adding AM/PM only once at the first appearance of each part of the day'''
 
     start_hour = math.floor(earliest_departure)
     end_hour = math.ceil(latest_departure)
 
     # Set ticks every hour
-    ax.set_xticks(range(start_hour, end_hour + 1, 1))
+    ticks = list(range(start_hour, end_hour + 1))
+    ax.set_xticks(ticks)
 
-    # Set x-tick labels to HH:MM format
-    # TODO: Modify this so that it shows am and pm
-    ax.set_xticklabels([f"{h}:00" for h in range(start_hour, end_hour + 1)])
+    # Set x-tick labels to HH:MM format with AM or PM for first appearance
+    labels = []
+    pm_suffix_added = False
+
+    for i, h in enumerate(ticks):
+        hour_24 = h % 24
+        hour_12 = (h - 1) % 12 + 1
+
+        # Add AM to first two tick labels (first one will not be visible)
+        if i < 2:
+            label = f"{hour_12}:00 AM"
+        # Add PM only to the noon tick (12 PM)
+        elif hour_24 == 12 and not pm_suffix_added:
+            label = f"{hour_12}:00 PM"
+            pm_suffix_added = True
+        else:
+            # No suffix for other labels
+            label = f"{hour_12}:00"
+
+        labels.append(label)
+
+    ax.set_xticklabels(labels)
 
     # Rotate x-tick labels if crowded
     max_ticks = 10  # Set a threshold for the number of ticks
-    ticks_loc = ax.get_xticks()
 
-    if len(ticks_loc) > max_ticks:
-        plt.xticks(rotation=45)
+    if len(ticks) > max_ticks:
+        ax.tick_params(axis='x', rotation=45)
     else:
-        plt.xticks(rotation=0)  # Reset rotation if not crowded
+        ax.tick_params(axis='x', rotation=0)  # Reset rotation if not crowded
 
     # Ensure axis bounds are good
     # (GradientBoostingRegressor fit lines include
