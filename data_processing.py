@@ -59,9 +59,10 @@ def process_data(filename='commuting_data.csv'):
         ).dt.total_seconds()/(60*60)
         # Subtract 4 minutes from 'minutes_to_work' if 'gas' appears
         # in that row under the column 'comments_from_home_to_work'
-        gas_mask = df['comments_from_home_to_work'].str.contains(
-            'gas', na=False)
-        df.loc[gas_mask, 'minutes_to_work'] -= 4
+        if ('comments_from_home_to_work' in df.columns and
+                df['comments_from_home_to_work'].notna().any()):
+            df.loc[df['comments_from_home_to_work'].str.contains(
+                'gas', na=False), 'minutes_to_work'] -= 4
     if 'home_arrival_time' in df.columns:
         df['minutes_to_home'] = (
             df['home_arrival_time'] - df['work_departure_time']
@@ -78,8 +79,10 @@ def process_data(filename='commuting_data.csv'):
         ).dt.total_seconds()/(60*60)
         # Subtract 4 minutes from 'minutes_to_home' if 'gas' appears
         # in that row under the column 'comments_from_work_to_home'
-        df.loc[df['comments_from_work_to_home'].str.contains(
-            'gas', na=False), 'minutes_to_home'] -= 4
+        if ('comments_from_work_to_home' in df.columns and
+                df['comments_from_work_to_home'].notna().any()):
+            df.loc[df['comments_from_work_to_home'].str.contains(
+                'gas', na=False), 'minutes_to_home'] -= 4
 
     # Adding column for month to help explore seasonality in the data
     df['date'] = pd.to_datetime(df['date'])

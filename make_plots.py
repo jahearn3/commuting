@@ -107,9 +107,12 @@ def time_xticks(ax, earliest_departure, latest_departure):
         hour_24 = h % 24
         hour_12 = (h - 1) % 12 + 1
 
-        # Add AM to first two tick labels (first one will not be visible)
+        # Add AM or PM to first two tick labels (first one will not be visible)
         if i < 2:
-            label = f"{hour_12}:00 AM"
+            if hour_24 >= 12:
+                label = f"{hour_12}:00 PM"
+            else:
+                label = f"{hour_12}:00 AM"
         # Add PM only to the noon tick (12 PM)
         elif hour_24 == 12 and not pm_suffix_added:
             label = f"{hour_12}:00 PM"
@@ -141,7 +144,6 @@ def duration_vs_departure(filename, df, start='home', end='work', gbr=False,
                           dtr=False, rfr=False, nn=False, xgb=False,
                           ensemble_r=False, comments=False, annotate=True,
                           show_extra_prediction_lines=False):
-    # fig = plt.figure()
 
     plt.style.use('default')
     sns.reset_orig()
@@ -157,11 +159,19 @@ def duration_vs_departure(filename, df, start='home', end='work', gbr=False,
     lower_mask = df['minutes_to_' + end] < mean + plot_split
     upper_mask = df['minutes_to_' + end] >= mean + plot_split
 
-    # Create two subplots, stacked vertically, sharing x-axis
-    fig, (ax_upper, ax_lower) = plt.subplots(
-        2, 1, sharex=True, figsize=(8, 6),
-        gridspec_kw={'height_ratios': [1, 5], 'hspace': 0.0}
-    )
+    # Determine if we need split plots based on dataset size
+    use_split_plot = len(df) > 20
+
+    if use_split_plot:
+        # Create two subplots, stacked vertically, sharing x-axis
+        fig, (ax_upper, ax_lower) = plt.subplots(
+            2, 1, sharex=True, figsize=(8, 6),
+            gridspec_kw={'height_ratios': [1, 5], 'hspace': 0.0}
+        )
+    else:
+        # Create single plot
+        fig, ax_lower = plt.subplots(figsize=(8, 6))
+        ax_upper = None
 
     # Apply the default theme
     sns.set_theme(style='white')
@@ -171,39 +181,43 @@ def duration_vs_departure(filename, df, start='home', end='work', gbr=False,
                     y='minutes_to_' + end, hue='day_of_week',
                     hue_order=['Mon', 'Tue', 'Wed', 'Thu', 'Fri'], s=1,
                     ax=ax_lower)
-    sns.scatterplot(data=df[upper_mask], x=start + '_departure_time_hr',
-                    y='minutes_to_' + end, hue='day_of_week',
-                    hue_order=['Mon', 'Tue', 'Wed', 'Thu', 'Fri'], s=1,
-                    ax=ax_upper, legend=False)
+    if use_split_plot:
+        sns.scatterplot(data=df[upper_mask], x=start + '_departure_time_hr',
+                        y='minutes_to_' + end, hue='day_of_week',
+                        hue_order=['Mon', 'Tue', 'Wed', 'Thu', 'Fri'], s=1,
+                        ax=ax_upper, legend=False)
 
-    # Hide the spines between ax_lower and ax_upper
-    ax_lower.spines['top'].set_visible(False)
-    ax_upper.spines['bottom'].set_visible(False)
+        # Hide the spines between ax_lower and ax_upper
+        ax_lower.spines['top'].set_visible(False)
+        ax_upper.spines['bottom'].set_visible(False)
 
-    # Remove x tick labels from the upper plot
-    ax_upper.tick_params(labelbottom=False)
+        # Remove x tick labels from the upper plot
+        ax_upper.tick_params(labelbottom=False)
 
-    # Add diagonal lines to indicate the break
-    d = .015  # size of diagonal lines in axes coordinates
-    kwargs = dict(transform=ax_lower.transAxes, color='k', clip_on=False)
-    # top-left diagonal
-    ax_lower.plot((-d, +d), (1 - d, 1 + d), **kwargs)
-    # top-right diagonal
-    ax_lower.plot((1 - d, 1 + d), (1 - d, 1 + d), **kwargs)
+        # Add diagonal lines to indicate the break
+        d = .015  # size of diagonal lines in axes coordinates
+        kwargs = dict(transform=ax_lower.transAxes, color='k', clip_on=False)
+        ax_lower.plot((-d, +d), (1 - d, 1 + d), **kwargs)
+        ax_lower.plot((1 - d, 1 + d), (1 - d, 1 + d), **kwargs)
 
     # Get the legend handles and labels
     # (to enlarge legend scatter points later on)
-    handles, labels = ax_upper.get_legend_handles_labels()
+    # handles, labels = ax_upper.get_legend_handles_labels()
+    handles, labels = ax_lower.get_legend_handles_labels()
 
     # Highlight the most recent trip by putting a yellow halo around it
     df_subset = df[[start + '_departure_time_hr', 'minutes_to_' + end]]
     df_subset = df_subset.dropna()
     x_latest = df_subset[start + '_departure_time_hr'][df_subset.index[-1]]
     y_latest = df_subset['minutes_to_' + end][df_subset.index[-1]]
-    if y_latest < mean + plot_split:
+
+    if use_split_plot:
+        if y_latest < mean + plot_split:
+            ax_lower.scatter(x_latest, y_latest, c='#FFFF14', s=100)
+        elif y_latest >= mean + plot_split:
+            ax_upper.scatter(x_latest, y_latest, c='#FFFF14', s=100)
+    else:
         ax_lower.scatter(x_latest, y_latest, c='#FFFF14', s=100)
-    elif y_latest >= mean + plot_split:
-        ax_upper.scatter(x_latest, y_latest, c='#FFFF14', s=100)
 
     # Calculate the deviation of the most recent trip
     z = (y_latest - mean) / sigma if sigma else 0
@@ -249,8 +263,10 @@ def duration_vs_departure(filename, df, start='home', end='work', gbr=False,
     ax_lower.axhline(mean, color='c', linestyle='dotted', label='Mean')
 
     # Add horizontal line at 3 * sigma
-    ax_upper.axhline(mean + three_sigma, color='gray', linestyle='dotted')
-    # This line does not show up but the label is needed for the legend
+    if use_split_plot:
+        ax_upper.axhline(mean + three_sigma, color='gray', linestyle='dotted')
+
+    # Even if this line shows up in ax_upper the label is needed for the legend
     ax_lower.axhline(mean + three_sigma, color='gray', linestyle='dotted',
                      label=r'Mean + $3\sigma$')
 
@@ -258,12 +274,15 @@ def duration_vs_departure(filename, df, start='home', end='work', gbr=False,
     y_lower_min = df['minutes_to_' + end].min() - 1
     y_upper_max = df['minutes_to_' + end].max() + 4
 
-    if end == 'home':
-        gap = -1
+    if use_split_plot:
+        if end == 'home':
+            gap = -1
+        else:
+            gap = -3
+        ax_lower.set_ylim(y_lower_min, mean + plot_split - gap)
+        ax_upper.set_ylim(mean + plot_split + gap, y_upper_max)
     else:
-        gap = -3
-    ax_lower.set_ylim(y_lower_min, mean + plot_split - gap)
-    ax_upper.set_ylim(mean + plot_split + gap, y_upper_max)
+        ax_lower.set_ylim(y_lower_min, y_upper_max)
 
     # Add comments near points
     if comments:
@@ -289,26 +308,31 @@ def duration_vs_departure(filename, df, start='home', end='work', gbr=False,
     ax_lower = sns.scatterplot(data=df[lower_mask],
                                x=start + '_departure_time_hr',
                                y='minutes_to_' + end, hue='day_of_week',
-                               hue_order=['Mon', 'Tue', 'Wed', 'Thu', 'Fri'],
+                               hue_order=['Mon', 'Tue', 'Wed', 'Thu',
+                                          'Fri'],
                                size='mileage_to_' + end, legend=False,
                                ax=ax_lower)
-    ax_upper = sns.scatterplot(data=df[upper_mask],
-                               x=start + '_departure_time_hr',
-                               y='minutes_to_' + end, hue='day_of_week',
-                               hue_order=['Mon', 'Tue', 'Wed', 'Thu', 'Fri'],
-                               size='mileage_to_' + end, legend=False,
-                               ax=ax_upper)
+    if use_split_plot:
+        ax_upper = sns.scatterplot(data=df[upper_mask],
+                                   x=start + '_departure_time_hr',
+                                   y='minutes_to_' + end, hue='day_of_week',
+                                   hue_order=['Mon', 'Tue', 'Wed', 'Thu',
+                                              'Fri'],
+                                   size='mileage_to_' + end, legend=False,
+                                   ax=ax_upper)
     ax_lower = time_xticks(ax_lower, df[start + '_departure_time_hr'].min(),
                            df[start + '_departure_time_hr'].max())
-    ax_upper = time_xticks(ax_upper, df[start + '_departure_time_hr'].min(),
-                           df[start + '_departure_time_hr'].max())
+    if use_split_plot:
+        ax_upper = time_xticks(
+            ax_upper, df[start + '_departure_time_hr'].min(),
+            df[start + '_departure_time_hr'].max())
 
     # Practice with statsmodels
     x, y = model.linear_prediction_from_statsmodels(df, start, end)
     if show_extra_prediction_lines:
-        # ax.plot(x, y, c='b', label='Linear', linestyle='dotted')
         ax_lower.plot(x, y, c='b', label='Linear', linestyle='dotted')
-        ax_upper.plot(x, y, c='b', label='Linear', linestyle='dotted')
+        if use_split_plot:
+            ax_upper.plot(x, y, c='b', label='Linear', linestyle='dotted')
 
     # TODO: Consider filtering out outliers using the 3 sigma from linear fit
     # line instead of the 3 sigma from the mean line
@@ -334,7 +358,8 @@ def duration_vs_departure(filename, df, start='home', end='work', gbr=False,
         print("GBR --- %s seconds ---" % (time.time() - start_time))
         if show_extra_prediction_lines:
             ax_lower.plot(x, y, c='c', label='Gradient Boosting')
-            ax_upper.plot(x, y, c='c', label='Gradient Boosting')
+            if use_split_plot:
+                ax_upper.plot(x, y, c='c', label='Gradient Boosting')
     if dtr:
         start_time = time.time()
         # dtreg, mse = model.fit_dtr(X_train, X_test, y_train, y_test)
@@ -345,7 +370,8 @@ def duration_vs_departure(filename, df, start='home', end='work', gbr=False,
         print("DTR --- %s seconds ---" % (time.time() - start_time))
         if show_extra_prediction_lines:
             ax_lower.plot(x, y, c='g', label='Decision Tree')
-            ax_upper.plot(x, y, c='g', label='Decision Tree')
+            if use_split_plot:
+                ax_upper.plot(x, y, c='g', label='Decision Tree')
     if rfr:
         start_time = time.time()
         # rfreg, mse = model.fit_rfr(X_train, X_test, y_train, y_test)
@@ -356,7 +382,8 @@ def duration_vs_departure(filename, df, start='home', end='work', gbr=False,
         print("RFR --- %s seconds ---" % (time.time() - start_time))
         if show_extra_prediction_lines:
             ax_lower.plot(x, y, c='m', label='Random Forest')
-            ax_upper.plot(x, y, c='m', label='Random Forest')
+            if use_split_plot:
+                ax_upper.plot(x, y, c='m', label='Random Forest')
     if nn:
         start_time = time.time()
         nnreg, mse = model.fit_nn(X_train, X_test, y_train, y_test)
@@ -364,7 +391,8 @@ def duration_vs_departure(filename, df, start='home', end='work', gbr=False,
         print("NN --- %s seconds ---" % (time.time() - start_time))
         if show_extra_prediction_lines:
             ax_lower.plot(x, y, c='orange', label='Neural Network')
-            ax_upper.plot(x, y, c='orange', label='Neural Network')
+            if use_split_plot:
+                ax_upper.plot(x, y, c='orange', label='Neural Network')
     if xgb:
         start_time = time.time()
         # xgbreg, mse = model.fit_xgbr(X_train, X_test, y_train, y_test)
@@ -375,7 +403,8 @@ def duration_vs_departure(filename, df, start='home', end='work', gbr=False,
         print("XGB --- %s seconds ---" % (time.time() - start_time))
         if show_extra_prediction_lines:
             ax_lower.plot(x, y, c='k', label='XGBoost')
-            ax_upper.plot(x, y, c='k', label='XGBoost')
+            if use_split_plot:
+                ax_upper.plot(x, y, c='k', label='XGBoost')
 
     if ensemble_r:
         start_time = time.time()
@@ -395,22 +424,26 @@ def duration_vs_departure(filename, df, start='home', end='work', gbr=False,
         x, y = model.prediction(ensmbl, df, start)
         print("Ensemble --- %s seconds ---" % (time.time() - start_time))
         if show_extra_prediction_lines:
-            # ax.plot(x, y, c='chartreuse', label='Ensemble')
             ax_lower.plot(x, y, c='chartreuse', label='Ensemble')
-            ax_upper.plot(x, y, c='chartreuse', label='Ensemble')
+            if use_split_plot:
+                ax_upper.plot(x, y, c='chartreuse', label='Ensemble')
         else:
             ax_lower.plot(x, y, c='k', label='ML Prediction')
-            ax_upper.plot(x, y, c='k', label='ML Prediction')
+            if use_split_plot:
+                ax_upper.plot(x, y, c='k', label='ML Prediction')
 
-    if gbr or dtr or rfr or nn or xgb:
-        # Create a new legend with larger markers
-        plt.legend(handles=handles, labels=labels, markerscale=5,
-                   bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0.)
+    # if gbr or dtr or rfr or nn or xgb:
+    #     # Create a new legend with larger markers
+    #     plt.legend(handles=handles, labels=labels, markerscale=5,
+    #                bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0.)
+    plt.legend(handles=handles, labels=labels, markerscale=5,
+               bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0.)
 
     # Specfiy axis labels
     ax_lower.set(xlabel=start.capitalize() + ' Departure Time',
                  ylabel='Minutes to ' + end.capitalize(), title='')
-    ax_upper.set(xlabel='', ylabel='', title='Commuting Time')
+    if use_split_plot:
+        ax_upper.set(xlabel='', ylabel='', title='Commuting Time')
 
     yticks = ax_lower.get_yticks()
     # Remove the max tick(s)
