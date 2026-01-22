@@ -1,22 +1,16 @@
 import seaborn as sns
 import matplotlib.pyplot as plt
-# import matplotlib.ticker as ticker
-# import matplotlib.cm as cm
 import numpy as np
-# import pandas as pd
-# from statsmodels.formula.api import ols
-# from sklearn.metrics import mean_squared_error as MSE
-from sklearn.inspection import permutation_importance
-# from sklearn import ensemble
 import math
 import time
 import os
 import re
-# import scipy.interpolate as sci
 import textwrap
 import warnings
 import model
 import data_processing as dp
+from sklearn.inspection import permutation_importance
+from scipy.interpolate import UnivariateSpline
 
 
 warnings.simplefilter(action='ignore', category=FutureWarning)
@@ -88,6 +82,22 @@ def plot_feature_importance(plots_folder, start, end, reg, X_test, y_test, df):
     plt.clf()
 
 
+def format_time_12h(decimal_hour):
+    '''Convert decimal hour to 12-hour format with AM/PM.
+
+    Args:
+        decimal_hour: Time as a decimal (e.g., 8.5 for 8:30)
+
+    Returns:
+        String in format "H:MM AM" or "H:MM PM"
+    '''
+    hour_24 = int(decimal_hour)
+    minutes = int((decimal_hour * 60) % 60)
+    hour_12 = (hour_24 - 1) % 12 + 1
+    period = "AM" if hour_24 < 12 else "PM"
+    return f"{hour_12}:{minutes:02d} {period}"
+
+
 def time_xticks(ax, earliest_departure, latest_departure):
     '''Change x-axis ticks from decimal form to 12-hour HH:MM AM/PM format,
     adding AM/PM only once at the first appearance of each part of the day'''
@@ -138,6 +148,37 @@ def time_xticks(ax, earliest_departure, latest_departure):
     # some weird vertical lines way off to the left)
     ax.set_xlim(earliest_departure - 0.1, latest_departure + 0.1)
     return ax
+
+
+def smooth_line(x, y, num_points=500, smoothing_factor=None):
+    """
+    Smooth a line by fitting a spline and resampling with more points.
+
+    Parameters:
+    - x, y: Lists or arrays of original data points.
+    - num_points: Number of points in the smoothed output (default 500).
+    - smoothing_factor: Smoothing factor passed to UnivariateSpline.
+                        If None, spline interpolates through points exactly.
+
+    Returns:
+    - x_smooth, y_smooth: Smoothed arrays with length num_points.
+    """
+    x = np.array(x)
+    y = np.array(y)
+
+    # Sort x and y by x to ensure proper spline fitting
+    sorted_indices = np.argsort(x)
+    x_sorted = x[sorted_indices]
+    y_sorted = y[sorted_indices]
+
+    # Fit spline with smoothing factor
+    spline = UnivariateSpline(x_sorted, y_sorted, s=smoothing_factor, k=2)
+
+    # Generate new x values with higher resolution
+    x_smooth = np.linspace(x_sorted.min(), x_sorted.max(), num_points)
+    y_smooth = spline(x_smooth)
+
+    return x_smooth, y_smooth
 
 
 def duration_vs_departure(filename, df, start='home', end='work', gbr=False,
@@ -233,14 +274,11 @@ def duration_vs_departure(filename, df, start='home', end='work', gbr=False,
             (df_similar_departure['minutes_to_' + end] > y_latest).sum() /
             (len(df_similar_departure) - 1)
         )
-        x_latest_hmm = ("%d:%02d" % (int(x_latest),
-                                     int((x_latest*60) % 60)))
+        x_latest_hmm = format_time_12h(x_latest)
         x_sim_min = df_similar_departure[start + '_departure_time_hr'].min()
         x_sim_max = df_similar_departure[start + '_departure_time_hr'].max()
-        x_similar_min_hmm = ("%d:%02d" % (int(x_sim_min),
-                                          int((x_sim_min*60) % 60)))
-        x_similar_max_hmm = ("%d:%02d" % (int(x_sim_max),
-                                          int((x_sim_max*60) % 60)))
+        x_similar_min_hmm = format_time_12h(x_sim_min)
+        x_similar_max_hmm = format_time_12h(x_sim_max)
         percentile_text = (f'The most recent trip departing \n{start} at '
                            f'{x_latest_hmm} took {int(y_latest)} minutes, '
                            f'\nwhich is ')
@@ -431,11 +469,12 @@ def duration_vs_departure(filename, df, start='home', end='work', gbr=False,
             ax_lower.plot(x, y, c='k', label='ML Prediction')
             if use_split_plot:
                 ax_upper.plot(x, y, c='k', label='ML Prediction')
+        # for s, c in zip([0, 1, 10], ['g', 'r', 'c']):
+        #     x_smooth, y_smooth = smooth_line(x, y, smoothing_factor=s)
+        #     ax_lower.plot(x_smooth, y_smooth, c=c, label='Smoothed line')
+        #     if use_split_plot:
+        #         ax_upper.plot(x_smooth, y_smooth, c=c, label='Smoothed line')
 
-    # if gbr or dtr or rfr or nn or xgb:
-    #     # Create a new legend with larger markers
-    #     plt.legend(handles=handles, labels=labels, markerscale=5,
-    #                bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0.)
     plt.legend(handles=handles, labels=labels, markerscale=5,
                bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0.)
 
