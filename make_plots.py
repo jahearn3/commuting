@@ -308,6 +308,22 @@ def duration_vs_departure(filename, df, start='home', end='work', gbr=False,
     ax_lower.axhline(mean + three_sigma, color='gray', linestyle='dotted',
                      label=r'Mean + $3\sigma$')
 
+    # Add text labels for the horizontal lines on the far right side
+    x_max = df[start + '_departure_time_hr'].max()
+    ax_lower.text(x_max, mean - 1, f'Mean = {mean:.1f} min',
+                  fontsize=8, color='c',
+                  verticalalignment='top', horizontalalignment='right')
+    if use_split_plot:
+        ax_upper.text(x_max, mean + three_sigma - 1,
+                      f'Mean + $3\\sigma$ = {mean + three_sigma:.1f} min',
+                      fontsize=8, color='gray',
+                      verticalalignment='top', horizontalalignment='right')
+    else:
+        ax_lower.text(x_max, mean + three_sigma - 1,
+                      f'Mean + $3\\sigma$ = {mean + three_sigma:.1f} min',
+                      fontsize=8, color='gray',
+                      verticalalignment='top', horizontalalignment='right')
+
     # Set y-limits
     y_lower_min = df['minutes_to_' + end].min() - 1
     y_upper_max = df['minutes_to_' + end].max() + 4
