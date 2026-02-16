@@ -297,6 +297,27 @@ def duration_vs_departure(filename, df, start='home', end='work', gbr=False,
                           transform=ax_lower.transAxes,
                           verticalalignment='top')
 
+    # Print if latest is a top or bottom 10 time
+    df_sorted = df.sort_values('minutes_to_' + end)
+    df_sorted = df_sorted[df_sorted['minutes_to_' + end].notna()]
+    df_sorted['minutes_to_' + end] = df_sorted['minutes_to_' + end].astype(int)
+    df_sorted[start + '_departure_time_hmm'] = (
+        df_sorted[start + '_departure_time_hr'].apply(format_time_12h)
+    )
+    comment_col = 'comments_from_' + start + '_to_' + end
+    if comment_col in df.columns:
+        df_sorted[comment_col] = df_sorted[comment_col].fillna('')
+    bottom_10_df = df_sorted.head(10)
+    top_10_df = df_sorted.tail(10)
+    cols = ['minutes_to_' + end, 'date', 'day_of_week',
+            start + '_departure_time_hmm', comment_col]
+    if y_latest in bottom_10_df['minutes_to_' + end].values:
+        print("The most recent trip is among the 10 fastest departure times:")
+        print(bottom_10_df[cols])
+    elif y_latest in top_10_df['minutes_to_' + end].values:
+        print("The most recent trip is among the 10 slowest departure times:")
+        print(top_10_df[cols])
+
     # Add horizontal line at mean
     ax_lower.axhline(mean, color='c', linestyle='dotted', label='Mean')
 
