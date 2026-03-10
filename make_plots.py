@@ -11,6 +11,7 @@ import model
 import data_processing as dp
 from sklearn.inspection import permutation_importance
 from scipy.interpolate import UnivariateSpline
+from scipy.stats import shapiro
 
 
 warnings.simplefilter(action='ignore', category=FutureWarning)
@@ -260,7 +261,25 @@ def duration_vs_departure(filename, df, start='home', end='work', gbr=False,
     else:
         ax_lower.scatter(x_latest, y_latest, c='#FFFF14', s=100)
 
+    # Print the percentage of trips that are within 1-2 sigma of the mean
+    w_1_sigma = (df['minutes_to_' + end] > mean - sigma) & (
+        df['minutes_to_' + end] < mean + sigma)
+    w_2_sigma = (df['minutes_to_' + end] > mean - 2 * sigma) & (
+        df['minutes_to_' + end] < mean + 2 * sigma)
+    print(f"{w_1_sigma.mean():.1%} of trips are within 1 sigma of the mean.")
+    print(f"{w_2_sigma.mean():.1%} of trips are within 2 sigma of the mean.")
+
+    # Test for normality using the Shapiro-Wilk test
+    stat, p_value = shapiro(df['minutes_to_' + end].dropna())
+    alpha = 0.05
+    if p_value > alpha:
+        print("The data is likely normally distributed (fail to reject H0).")
+    else:
+        print("The data is not normally distributed (reject H0).")
+
     # Calculate the deviation of the most recent trip
+    print("=" * 75)
+    print("Most Recent Trip Stats:")
     z = (y_latest - mean) / sigma if sigma else 0
     print(f"Z-score of the most recent trip: {z:.2f}")
 
@@ -282,15 +301,20 @@ def duration_vs_departure(filename, df, start='home', end='work', gbr=False,
         percentile_text = (f'The most recent trip departing \n{start} at '
                            f'{x_latest_hmm} took {int(y_latest)} minutes, '
                            f'\nwhich is ')
-        if percentile == 0:
-            percentile_text += 'the slowest '
-        elif percentile == 1:
-            percentile_text += 'the fastest '
-        else:
-            percentile_text += f'faster than {percentile:.0%} '
-        percentile_text += (f'of {len(df_similar_departure)-1} \ntrips with '
-                            f'departure times \nbetween {x_similar_min_hmm} '
-                            f'and {x_similar_max_hmm}.')
+        # if percentile == 0:
+        #     percentile_text += 'the slowest '
+        # elif percentile == 1:
+        #     percentile_text += 'the fastest '
+        # else:
+        #     percentile_text += f'faster than {percentile:.0%} '
+        # percentile_text += (f'of {len(df_similar_departure)-1} \ntrips with '
+        #                     f'departure times \nbetween {x_similar_min_hmm} '
+        #                     f'and {x_similar_max_hmm}.')
+
+        percentile_text += (f'faster than {percentile:.0%} of '
+                            f'{len(df_similar_departure)-1} \nsimilar trips '
+                            f'with departure times \nbetween '
+                            f'{x_similar_min_hmm} and {x_similar_max_hmm}.')
         print(percentile_text)
         if annotate:
             ax_lower.text(1.05, 0.25, percentile_text, fontsize=8,
@@ -307,6 +331,23 @@ def duration_vs_departure(filename, df, start='home', end='work', gbr=False,
     comment_col = 'comments_from_' + start + '_to_' + end
     if comment_col in df.columns:
         df_sorted[comment_col] = df_sorted[comment_col].fillna('')
+    # Print rank of latest trip
+    latest_rank = df_sorted.index.get_loc(df_subset.index[-1]) + 1
+    latest_rank_text = f"{latest_rank}"
+    # Handle ordinal suffixes (1st, 2nd, 3rd, 4th, etc.)
+    # Special cases: 11th, 12th, 13th
+    if 10 <= latest_rank % 100 <= 13:
+        latest_rank_text += 'th'
+    elif latest_rank % 10 == 1:
+        latest_rank_text += 'st'
+    elif latest_rank % 10 == 2:
+        latest_rank_text += 'nd'
+    elif latest_rank % 10 == 3:
+        latest_rank_text += 'rd'
+    else:
+        latest_rank_text += 'th'
+    print(f"The most recent trip ranks {latest_rank_text} out of "
+          f"{len(df_sorted)} trips based on minutes to {end}.")
     bottom_10_df = df_sorted.head(10)
     top_10_df = df_sorted.tail(10)
     cols = ['minutes_to_' + end, 'date', 'day_of_week',
@@ -417,11 +458,15 @@ def duration_vs_departure(filename, df, start='home', end='work', gbr=False,
 
     # Split data into training and test sets
     if gbr or dtr or rfr or nn or xgb:
+        print("=" * 75)
+        print("Dataset Stats:")
         X_train, X_test, y_train, y_test = dp.preprocess_data(start, end, df)
         print(f'shape of X_train: {X_train.shape}')
         # print(f'shape of y_train: {y_train.shape}')
         print(f'shape of X_test: {X_test.shape}')
         # print(f'shape of y_test: {y_test.shape}')
+        print("=" * 75)
+        print("Model Training Parameters and Speed:")
 
     if gbr:
         start_time = time.time()
@@ -809,7 +854,8 @@ def departure_times_over_time(plots_folder, start, end, df):
     plt.clf()
 
 
-def arrival_times_over_time(plots_folder, start, end, df):
+def arrival_times_over_time(plots_folder, start, end, df,
+                            departure_targets=False):
     # Apply the default theme
     sns.set_theme()
 
@@ -832,20 +878,20 @@ def arrival_times_over_time(plots_folder, start, end, df):
                 f'{end}.png', bbox_inches='tight')
     plt.clf()
 
-    mon_df = df[df['day_of_week'] == 'Mon']
-    tue_df = df[df['day_of_week'] == 'Tue']
-    wed_df = df[df['day_of_week'] == 'Wed']
-    thu_df = df[df['day_of_week'] == 'Thu']
-    fri_df = df[df['day_of_week'] == 'Fri']
+    if departure_targets and end == 'work':
+        mon_df = df[df['day_of_week'] == 'Mon']
+        tue_df = df[df['day_of_week'] == 'Tue']
+        wed_df = df[df['day_of_week'] == 'Wed']
+        thu_df = df[df['day_of_week'] == 'Thu']
+        fri_df = df[df['day_of_week'] == 'Fri']
 
-    # Calculate the 80th percentile of commuting times for each day of the week
-    mon_80 = mon_df['minutes_to_' + end].quantile(0.8)
-    tue_80 = tue_df['minutes_to_' + end].quantile(0.8)
-    wed_80 = wed_df['minutes_to_' + end].quantile(0.8)
-    thu_80 = thu_df['minutes_to_' + end].quantile(0.8)
-    fri_80 = fri_df['minutes_to_' + end].quantile(0.8)
+        # Calculate the 80th percentile of commuting time for each weekday
+        mon_80 = mon_df['minutes_to_' + end].quantile(0.8)
+        tue_80 = tue_df['minutes_to_' + end].quantile(0.8)
+        wed_80 = wed_df['minutes_to_' + end].quantile(0.8)
+        thu_80 = thu_df['minutes_to_' + end].quantile(0.8)
+        fri_80 = fri_df['minutes_to_' + end].quantile(0.8)
 
-    if end == 'work':
         print('80th percentile of commuting times for each day of the week:')
         print(round(mon_80, 1), round(tue_80, 1), round(wed_80, 1),
               round(thu_80, 1), round(fri_80, 1))
