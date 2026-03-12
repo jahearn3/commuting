@@ -11,7 +11,6 @@ import model
 import data_processing as dp
 from sklearn.inspection import permutation_importance
 from scipy.interpolate import UnivariateSpline
-from scipy.stats import shapiro
 
 
 warnings.simplefilter(action='ignore', category=FutureWarning)
@@ -269,13 +268,8 @@ def duration_vs_departure(filename, df, start='home', end='work', gbr=False,
     print(f"{w_1_sigma.mean():.1%} of trips are within 1 sigma of the mean.")
     print(f"{w_2_sigma.mean():.1%} of trips are within 2 sigma of the mean.")
 
-    # Test for normality using the Shapiro-Wilk test
-    stat, p_value = shapiro(df['minutes_to_' + end].dropna())
-    alpha = 0.05
-    if p_value > alpha:
-        print("The data is likely normally distributed (fail to reject H0).")
-    else:
-        print("The data is not normally distributed (reject H0).")
+    model.goodness_of_fit_tests(df['minutes_to_' + end].dropna())
+    model.print_descriptive_statistics(df['minutes_to_' + end].dropna())
 
     # Calculate the deviation of the most recent trip
     print("=" * 75)
