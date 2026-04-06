@@ -11,6 +11,7 @@ import model
 import data_processing as dp
 from sklearn.inspection import permutation_importance
 from scipy.interpolate import UnivariateSpline
+from scipy.stats import norm, skewnorm
 
 
 warnings.simplefilter(action='ignore', category=FutureWarning)
@@ -600,6 +601,7 @@ def duration_vs_departure(filename, df, start='home', end='work', gbr=False,
     #                             gbreg, X_test, y_test, df)
 
     minutes_violin(plots_folder, start, end, df)
+    minutes_histogram(plots_folder, start, end, df)
 
     if ensemble_r:
         predictions_by_month(plots_folder, ensmbl, df, start, end)
@@ -629,6 +631,65 @@ def minutes_violin(plots_folder, start, end, df):
     plt.savefig(f'{plots_folder}/departure_time_from_{start}_to_{end}_by_day_'
                 f'violinplot')
     plt.clf()
+
+
+def minutes_histogram(plots_folder, start, end, df):
+    """Histogram of minutes to work, both as a whole and by day of week"""
+    minutes_col = 'minutes_to_' + end
+    valid_minutes = df[minutes_col].dropna()
+
+    # Use mean/std descriptive statistics for a simple normal approximation.
+    mean = valid_minutes.mean()
+    std = valid_minutes.std(ddof=1)
+    can_fit = len(valid_minutes) > 1 and std > 0
+
+    x_values = y_values = skew_y_values = None
+    if can_fit:
+        x_values = np.linspace(valid_minutes.min(), valid_minutes.max(), 400)
+        y_values = norm.pdf(x_values, loc=mean, scale=std)
+
+    show_skew_fit = end == 'work'
+    if show_skew_fit and len(valid_minutes) > 2 and std > 0:
+        try:
+            skew_fit_params = skewnorm.fit(valid_minutes)
+            skew_y_values = skewnorm.pdf(x_values, *skew_fit_params)
+        except Exception:
+            skew_y_values = None
+
+    plot_configs = [
+        {
+            'hist_kwargs': {'bins': 20, 'stat': 'density'},
+            'save_path': (
+                f'{plots_folder}/minutes_from_{start}_to_{end}_histogram'
+            )
+        },
+        {
+            'hist_kwargs': {
+                'hue': 'day_of_week',
+                'hue_order': ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'],
+                'bins': 20,
+                'stat': 'density',
+                'common_norm': False
+            },
+            'save_path': (
+                f'{plots_folder}/minutes_from_{start}_to_{end}_by_day_'
+                f'histogram'
+            )
+        }
+    ]
+
+    for config in plot_configs:
+        sns.histplot(data=df, x=minutes_col, **config['hist_kwargs'])
+        if can_fit:
+            plt.plot(x_values, y_values, color='black', linestyle='--',
+                     linewidth=2, label='Normal fit (mean/std)')
+            if skew_y_values is not None:
+                plt.plot(x_values, skew_y_values, color='tab:orange',
+                         linestyle='-', linewidth=2,
+                         label='Skew-normal fit')
+            plt.legend()
+        plt.savefig(config['save_path'])
+        plt.clf()
 
 
 def driving_and_waiting_vs_departure(filename, df, start='home',
@@ -756,8 +817,6 @@ def driving_and_waiting_vs_departure(filename, df, start='home',
         f'{start}_to_{end}.png'
     )
     plt.clf()
-
-# TODO: Calculate time at which to leave to arrive by 9am
 
 
 def predictions_by_month(plots_folder, reg, df, start, end):
