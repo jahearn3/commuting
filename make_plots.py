@@ -296,15 +296,6 @@ def duration_vs_departure(filename, df, start='home', end='work', gbr=False,
         percentile_text = (f'The most recent trip departing \n{start} at '
                            f'{x_latest_hmm} took {int(y_latest)} minutes, '
                            f'\nwhich is ')
-        # if percentile == 0:
-        #     percentile_text += 'the slowest '
-        # elif percentile == 1:
-        #     percentile_text += 'the fastest '
-        # else:
-        #     percentile_text += f'faster than {percentile:.0%} '
-        # percentile_text += (f'of {len(df_similar_departure)-1} \ntrips with '
-        #                     f'departure times \nbetween {x_similar_min_hmm} '
-        #                     f'and {x_similar_max_hmm}.')
 
         percentile_text += (f'faster than {percentile:.0%} of '
                             f'{len(df_similar_departure)-1} \nsimilar trips '
@@ -361,15 +352,25 @@ def duration_vs_departure(filename, df, start='home', end='work', gbr=False,
     if use_split_plot:
         ax_upper.axhline(mean + three_sigma, color='gray', linestyle='dotted')
 
+    # Add horizontal lines at +1 * sigma and -1 * sigma
+    ax_lower.axhline(mean + sigma, color='gray', linestyle='dotted')
+    ax_lower.axhline(mean - sigma, color='g', linestyle='dotted')
+
     # Even if this line shows up in ax_upper the label is needed for the legend
-    ax_lower.axhline(mean + three_sigma, color='gray', linestyle='dotted',
-                     label=r'Mean + $3\sigma$')
+    # ax_lower.axhline(mean + three_sigma, color='gray', linestyle='dotted',
+    #                  label=r'Mean + $3\sigma$')
 
     # Add text labels for the horizontal lines on the far right side
     x_max = df[start + '_departure_time_hr'].max()
     ax_lower.text(x_max, mean - 1, f'Mean = {mean:.1f} min',
                   fontsize=8, color='c',
                   verticalalignment='top', horizontalalignment='right')
+    ax_lower.text(x_max, mean + sigma - 1, f'Mean + $\\sigma$ = {mean + sigma:.1f} min',
+                  fontsize=8, color='c',
+                  verticalalignment='top', horizontalalignment='right')
+    ax_lower.text(x_max, mean - sigma - 1, f'Mean - $\\sigma$ = {mean - sigma:.1f} min',
+                  fontsize=8, color='c',
+                  verticalalignment='top', horizontalalignment='right')              
     if use_split_plot:
         ax_upper.text(x_max, mean + three_sigma - 1,
                       f'Mean + $3\\sigma$ = {mean + three_sigma:.1f} min',
