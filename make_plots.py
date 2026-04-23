@@ -365,12 +365,16 @@ def duration_vs_departure(filename, df, start='home', end='work', gbr=False,
     ax_lower.text(x_max, mean - 1, f'Mean = {mean:.1f} min',
                   fontsize=8, color='c',
                   verticalalignment='top', horizontalalignment='right')
-    ax_lower.text(x_max, mean + sigma - 1, f'Mean + $\\sigma$ = {mean + sigma:.1f} min',
-                  fontsize=8, color='c',
-                  verticalalignment='top', horizontalalignment='right')
-    ax_lower.text(x_max, mean - sigma - 1, f'Mean - $\\sigma$ = {mean - sigma:.1f} min',
-                  fontsize=8, color='c',
-                  verticalalignment='top', horizontalalignment='right')              
+    ax_lower.text(
+        x_max, mean + sigma - 1,
+        f'Mean + $\\sigma$ = {mean + sigma:.1f} min',
+        fontsize=8, color='c',
+        verticalalignment='top', horizontalalignment='right')
+    ax_lower.text(
+        x_max, mean - sigma - 1,
+        f'Mean - $\\sigma$ = {mean - sigma:.1f} min',
+        fontsize=8, color='c',
+        verticalalignment='top', horizontalalignment='right')
     if use_split_plot:
         ax_upper.text(x_max, mean + three_sigma - 1,
                       f'Mean + $3\\sigma$ = {mean + three_sigma:.1f} min',
@@ -609,6 +613,7 @@ def duration_vs_departure(filename, df, start='home', end='work', gbr=False,
 
     departure_times_over_time(plots_folder, start, end, df)
     arrival_times_over_time(plots_folder, start, end, df)
+    mileage_histogram(plots_folder, start, end, df)
 
 
 # violinplot of minutes to work
@@ -968,3 +973,20 @@ def arrival_times_over_time(plots_folder, start, end, df,
         fri_depart = ("%d:%02d" % (int(fri_depart),
                                    int((fri_depart*60) % 60)))
         print(mon_depart, tue_depart, wed_depart, thu_depart, fri_depart)
+
+
+def mileage_histogram(plots_folder, start, end, df):
+    min_mileage = df['mileage_to_' + end].min()
+    max_mileage = df['mileage_to_' + end].max()
+    bins = np.arange(min_mileage - 0.5, max_mileage + 1.5, 1)
+    ax = sns.histplot(data=df, x='mileage_to_' + end, bins=bins)
+    ax.set_yscale('log')
+    # plt.xlim(min_mileage - 1, max_mileage + 1)
+    for p in ax.patches:
+        height = p.get_height()
+        if height > 0:  # Only label non-empty bars
+            ax.text(p.get_x() + p.get_width()/2., height,
+                    f'{int(height)}',
+                    fontsize=8, ha="center", va="bottom")
+    plt.savefig(f'{plots_folder}/mileage_from_{start}_to_{end}_histogram')
+    plt.clf()
