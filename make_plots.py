@@ -277,6 +277,8 @@ def duration_vs_departure(filename, df, start='home', end='work', gbr=False,
     print("Most Recent Trip Stats:")
     z = (y_latest - mean) / sigma if sigma else 0
     print(f"Z-score of the most recent trip: {z:.2f}")
+    mileage = df['mileage_to_' + end][df_subset.index[-1]]
+    print(f"Mileage of the most recent trip: {mileage:.0f} miles")
 
     # Print percentile of most recent trip compared to similar departure times
     df_similar_departure = df_subset[

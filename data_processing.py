@@ -124,7 +124,12 @@ def preprocess_data(start, end, df):
         ~(np.abs(df_notna["minutes_to_" + end] - mean) <= 3 * std)
     ]
     print('Filtered out:')
-    print(df_filtered_out[['date', 'minutes_to_' + end]])
+    minutes_col = 'minutes_to_' + end
+    print(
+        df_filtered_out[['date', minutes_col]].assign(
+            **{minutes_col: df_filtered_out[minutes_col].round().astype('Int64')}
+        )
+    )
 
     X = df_ready[features]
     y = np.array(df_ready['minutes_to_' + end])

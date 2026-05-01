@@ -448,8 +448,8 @@ def goodness_of_fit_tests(data):
     # Shapiro-Wilk Test (for normality)
     stat, p_value = shapiro(data)
     print("\n1. Shapiro-Wilk Test (Normality):")
-    print(f"   Statistic: {stat:.6f}")
-    print(f"   P-value: {p_value:.6f}")
+    print(f"   Statistic: {stat:.4f}")
+    print(f"   P-value: {p_value:.4f}")
     print(f"   Result: {'Normal' if p_value > 0.05 else 'Not Normal'}")
 
     # Kolmogorov-Smirnov Test
@@ -458,24 +458,24 @@ def goodness_of_fit_tests(data):
     # Test against normal distribution
     stat, p_value = kstest(data, 'norm', args=(np.mean(data), np.std(data)))
     print("   Against Normal:")
-    print(f"   Statistic: {stat:.6f}, P-value: {p_value:.6f}")
+    print(f"   Statistic: {stat:.4f}, P-value: {p_value:.4f}")
 
     # Test against lognormal distribution
     shape, loc, scale = stats.lognorm.fit(data)
     stat, p_value = kstest(data, 'lognorm', args=(shape, loc, scale))
     print("   Against Lognormal:")
-    print(f"   Statistic: {stat:.6f}, P-value: {p_value:.6f}")
+    print(f"   Statistic: {stat:.4f}, P-value: {p_value:.4f}")
 
     # Test against exponential distribution
     loc, scale = stats.expon.fit(data)
     stat, p_value = kstest(data, 'expon', args=(loc, scale))
     print("   Against Exponential:")
-    print(f"   Statistic: {stat:.6f}, P-value: {p_value:.6f}")
+    print(f"   Statistic: {stat:.4f}, P-value: {p_value:.4f}")
 
     # Anderson-Darling Test
     print("\n3. Anderson-Darling Test:")
     result = anderson(data, dist='norm')
-    print(f"   Statistic: {result.statistic:.6f}")
+    print(f"   Statistic: {result.statistic:.4f}")
     print(f"   Critical values: {result.critical_values}")
     print(f"   Significance levels: {result.significance_level}%")
     for i in range(len(result.critical_values)):
@@ -505,9 +505,9 @@ def goodness_of_fit_tests(data):
     df = len(observed_freq) - 1 - 2  # -2 for estimated parameters
     p_value = 1 - stats.chi2.cdf(chi2_stat, df)
 
-    print(f"   Chi-square statistic: {chi2_stat:.6f}")
+    print(f"   Chi-square statistic: {chi2_stat:.4f}")
     print(f"   Degrees of freedom: {df}")
-    print(f"   P-value: {p_value:.6f}")
+    print(f"   P-value: {p_value:.4f}")
     print(f"   Result: {'Normal' if p_value > 0.05 else 'Not Normal'}")
 
     # Lilliefors Test (requires statsmodels)
@@ -515,8 +515,8 @@ def goodness_of_fit_tests(data):
         from statsmodels.stats.diagnostic import lilliefors
         stat, p_value = lilliefors(data, dist='norm')
         print("\n5. Lilliefors Test:")
-        print(f"   Statistic: {stat:.6f}")
-        print(f"   P-value: {p_value:.6f}")
+        print(f"   Statistic: {stat:.4f}")
+        print(f"   P-value: {p_value:.4f}")
         print(f"   Result: {'Normal' if p_value > 0.05 else 'Not Normal'}")
     except ImportError:
         print("\n5. Lilliefors Test: (requires statsmodels package)")
@@ -525,8 +525,8 @@ def goodness_of_fit_tests(data):
     print("\n6. Cramér-von Mises Test:")
     result = stats.cramervonmises(data, 'norm',
                                   args=(np.mean(data), np.std(data)))
-    print(f"   Statistic: {result.statistic:.6f}")
-    print(f"   P-value: {result.pvalue:.6f}")
+    print(f"   Statistic: {result.statistic:.4f}")
+    print(f"   P-value: {result.pvalue:.4f}")
     print(f"   Result: {'Normal' if result.pvalue > 0.05 else 'Not Normal'}")
 
 
@@ -540,29 +540,29 @@ def print_descriptive_statistics(data):
     # Basic statistics
     print("\nBasic Statistics:")
     print(f"   Count: {len(data)}")
-    print(f"   Mean: {np.mean(data):.6f}")
-    print(f"   Median: {np.median(data):.6f}")
-    print(f"   Mode: {stats.mode(data, keepdims=True).mode[0]:.6f}")
-    print(f"   Standard Deviation: {np.std(data, ddof=1):.6f}")
-    print(f"   Variance: {np.var(data, ddof=1):.6f}")
-    print(f"   Standard Error: {stats.sem(data):.6f}")
+    print(f"   Mean: {np.mean(data):.2f}")
+    print(f"   Median: {np.median(data):.0f}")
+    print(f"   Mode: {stats.mode(data, keepdims=True).mode[0]:.0f}")
+    print(f"   Standard Deviation: {np.std(data, ddof=1):.2f}")
+    print(f"   Variance: {np.var(data, ddof=1):.2f}")
+    print(f"   Standard Error: {stats.sem(data):.3f}")
 
     # Range statistics
     print("\nRange Statistics:")
-    print(f"   Minimum: {np.min(data):.6f}")
-    print(f"   Maximum: {np.max(data):.6f}")
-    print(f"   Range: {np.ptp(data):.6f}")
-    print(f"   IQR: {stats.iqr(data):.6f}")
+    print(f"   Minimum: {np.min(data):.0f}")
+    print(f"   Maximum: {np.max(data):.0f}")
+    print(f"   Range: {np.ptp(data):.0f}")
+    print(f"   IQR: {stats.iqr(data):.0f}")
 
     # Percentiles
     print("\nPercentiles:")
     percentiles = [5, 25, 50, 75, 95]
     for p in percentiles:
-        print(f"   {p}th percentile: {np.percentile(data, p):.6f}")
+        print(f"   {p}th percentile: {np.percentile(data, p):.0f}")
 
     # Shape statistics
     print("\nShape Statistics:")
-    print(f"   Skewness: {skew(data):.6f}")
+    print(f"   Skewness: {skew(data):.2f}")
     skew_interpretation = "symmetric" if abs(skew(data)) < 0.5 else \
         "moderately skewed" if abs(skew(data)) < 1 else "highly skewed"
     skew_direction = "none"
@@ -572,11 +572,11 @@ def print_descriptive_statistics(data):
         skew_direction = "left"
     print(f"   Skewness Interpretation: {skew_interpretation}")
     print(f"   Skew Direction: {skew_direction}")
-    print(f"   Kurtosis: {kurtosis(data):.6f}")
+    print(f"   Kurtosis: {kurtosis(data):.2f}")
     kurtosis_interpretation = "mesokurtic" if abs(kurtosis(data)) < 0.5 else \
         "leptokurtic" if kurtosis(data) > 0 else "platykurtic"
     print(f"   Kurtosis Interpretation: {kurtosis_interpretation}")
     print(f"   1st Moment (Mean): {moment(data, moment=1):.6f}")
-    print(f"   2nd Moment (Variance): {moment(data, moment=2):.6f}")
-    print(f"   3rd Moment: {moment(data, moment=3):.6f}")
-    print(f"   4th Moment: {moment(data, moment=4):.6f}")
+    print(f"   2nd Moment (Variance): {moment(data, moment=2):.2f}")
+    print(f"   3rd Moment: {moment(data, moment=3):.2f}")
+    print(f"   4th Moment: {moment(data, moment=4):.2f}")
