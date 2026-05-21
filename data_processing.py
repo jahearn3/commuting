@@ -14,7 +14,7 @@ def process_data(filename='commuting_data.csv'):
         pandas DataFrame
     '''
 
-    df = pd.read_csv(filename)
+    df = pd.read_csv(filename, parse_dates=['date'], index_col='date')
 
     if 'ferry' in filename:
         time_columns = ['home_departure_time',
@@ -34,7 +34,9 @@ def process_data(filename='commuting_data.csv'):
     # store times as datetime types
     for ts in time_columns:
         if ts in df.columns:
-            df[ts] = pd.to_datetime(df['date'] + ' ' + df[ts], errors='coerce')
+            df[ts] = pd.to_datetime(
+                df.index.astype(str) + ' ' + df[ts], errors='coerce'
+            )
 
     # Calculate minutes after midnight for departure and arrival times
     # and store these as new columns
@@ -49,13 +51,13 @@ def process_data(filename='commuting_data.csv'):
         ).dt.total_seconds()/60
         df['home_departure_time_hr'] = (
             df['home_departure_time'] -
-            pd.to_datetime(df['date'] + ' ' + str(midnight))
+            pd.to_datetime(df.index.astype(str) + ' ' + str(midnight))
         ).dt.total_seconds()/(60*60)
         df['mileage_to_work'] = (df['work_arrival_mileage'] -
                                  df['home_departure_mileage'])
         df['work_arrival_time_hr'] = (
             df['work_arrival_time'] -
-            pd.to_datetime(df['date'] + ' ' + str(midnight))
+            pd.to_datetime(df.index.astype(str) + ' ' + str(midnight))
         ).dt.total_seconds()/(60*60)
         # Subtract 4 minutes from 'minutes_to_work' if 'gas' appears
         # in that row under the column 'comments_from_home_to_work'
@@ -69,13 +71,13 @@ def process_data(filename='commuting_data.csv'):
         ).dt.total_seconds()/60
         df['work_departure_time_hr'] = (
             df['work_departure_time'] -
-            pd.to_datetime(df['date'] + ' ' + str(midnight))
+            pd.to_datetime(df.index.astype(str) + ' ' + str(midnight))
         ).dt.total_seconds()/(60*60)
         df['mileage_to_home'] = (df['home_arrival_mileage'] -
                                  df['work_departure_mileage'])
         df['home_arrival_time_hr'] = (
             df['home_arrival_time'] -
-            pd.to_datetime(df['date'] + ' ' + str(midnight))
+            pd.to_datetime(df.index.astype(str) + ' ' + str(midnight))
         ).dt.total_seconds()/(60*60)
         # Subtract 4 minutes from 'minutes_to_home' if 'gas' appears
         # in that row under the column 'comments_from_work_to_home'
@@ -85,9 +87,9 @@ def process_data(filename='commuting_data.csv'):
                 'gas', na=False), 'minutes_to_home'] -= 4
 
     # Adding column for month to help explore seasonality in the data
-    df['date'] = pd.to_datetime(df['date'])
-    df['month'] = df['date'].dt.month
-    df['quarter'] = df['date'].dt.quarter
+    # df['date'] = pd.to_datetime(df['date'])
+    df['month'] = df.index.month
+    df['quarter'] = df.index.quarter
 
     return df
 
@@ -126,8 +128,10 @@ def preprocess_data(start, end, df):
     print('Filtered out:')
     minutes_col = 'minutes_to_' + end
     print(
-        df_filtered_out[['date', minutes_col]].assign(
-            **{minutes_col: df_filtered_out[minutes_col].round().astype('Int64')}
+        df_filtered_out[[minutes_col]].assign(
+            **{minutes_col: (
+                df_filtered_out[minutes_col].round().astype('Int64')
+            )}
         )
     )
 

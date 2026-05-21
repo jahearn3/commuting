@@ -902,6 +902,15 @@ def departure_times_over_time(plots_folder, start, end, df):
     # Rotate and align the tick labels so they look better
     # fig.autofmt_xdate()
 
+    # Plot rolling average of departure time with a window of 30 days
+    df['smoothed_departure_time'] = (
+        df[start + '_departure_time_hr'].rolling(window=30, min_periods=1)
+        .mean()
+    )
+    ax.plot(df.index, df['smoothed_departure_time'],
+            color='black', label='30-Day Rolling Average')
+    plt.legend()
+
     ax.set(xlabel='Date',
            ylabel=start.capitalize() + ' Departure Time',
            title='Departure Time Evolution')
@@ -928,6 +937,15 @@ def arrival_times_over_time(plots_folder, start, end, df,
 
     # Rotate and align the tick labels so they look better
     # fig.autofmt_xdate()
+
+    # Plot rolling average of arrival time with a window of 30 days
+    df['smoothed_arrival_time'] = (
+        df[end + '_arrival_time_hr'].rolling(window=30, min_periods=1)
+        .mean()
+    )
+    ax.plot(df.index, df['smoothed_arrival_time'],
+            color='black', label='30-Day Rolling Average')
+    plt.legend()
 
     ax.set(xlabel='Date',
            ylabel=end.capitalize() + ' Arrival Time',
@@ -956,13 +974,14 @@ def arrival_times_over_time(plots_folder, start, end, df,
         print('80th percentile of commuting times for each day of the week:')
         print(round(mon_80, 1), round(tue_80, 1), round(wed_80, 1),
               round(thu_80, 1), round(fri_80, 1))
-        print('Depart by the following times to arrive by 9 am 80 percent '
-              'of the time:')
-        mon_depart = 9 - (mon_80 / 60)
-        tue_depart = 9 - (tue_80 / 60)
-        wed_depart = 9 - (wed_80 / 60)
-        thu_depart = 9 - (thu_80 / 60)
-        fri_depart = 9 - (fri_80 / 60)
+        arrival_target = 7
+        print(f'Depart by the following times to arrive by {arrival_target} '
+              f'am 80 percent of the time:')
+        mon_depart = arrival_target - (mon_80 / 60)
+        tue_depart = arrival_target - (tue_80 / 60)
+        wed_depart = arrival_target - (wed_80 / 60)
+        thu_depart = arrival_target - (thu_80 / 60)
+        fri_depart = arrival_target - (fri_80 / 60)
         # format the time as HH:MM
         mon_depart = ("%d:%02d" % (int(mon_depart),
                                    int((mon_depart*60) % 60)))
