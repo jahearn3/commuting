@@ -338,7 +338,7 @@ def duration_vs_departure(filename, df, start='home', end='work', gbr=False,
           f"{len(df_sorted)} trips based on minutes to {end}.")
     bottom_10_df = df_sorted.head(10)
     top_10_df = df_sorted.tail(10)
-    cols = ['minutes_to_' + end, 'date', 'day_of_week',
+    cols = ['minutes_to_' + end, 'day_of_week',
             start + '_departure_time_hmm', comment_col]
     if y_latest in bottom_10_df['minutes_to_' + end].values:
         print("The most recent trip is among the 10 fastest departure times:")
