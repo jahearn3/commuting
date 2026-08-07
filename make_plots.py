@@ -341,10 +341,12 @@ def duration_vs_departure(filename, df, start='home', end='work', gbr=False,
     cols = ['minutes_to_' + end, 'day_of_week',
             start + '_departure_time_hmm', comment_col]
     if y_latest in bottom_10_df['minutes_to_' + end].values:
-        print("The most recent trip is among the 10 fastest departure times:")
+        print(f"The most recent trip is among the 10 fastest from "
+              f"{start} to {end}:")
         print(bottom_10_df[cols])
     elif y_latest in top_10_df['minutes_to_' + end].values:
-        print("The most recent trip is among the 10 slowest departure times:")
+        print(f"The most recent trip is among the 10 slowest from "
+              f"{start} to {end}:")
         print(top_10_df[cols])
 
     # Add horizontal line at mean
