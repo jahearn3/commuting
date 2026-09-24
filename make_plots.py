@@ -185,11 +185,23 @@ def smooth_line(x, y, num_points=500, smoothing_factor=None):
 def duration_vs_departure(filename, df, start='home', end='work', gbr=False,
                           dtr=False, rfr=False, nn=False, xgb=False,
                           ensemble_r=False, comments=False, annotate=True,
-                          show_extra_prediction_lines=False):
+                          show_extra_prediction_lines=False,
+                          size_by_mileage=False):
 
     plt.style.use('default')
     sns.reset_orig()
 
+    # df is indexed by date, which can repeat when there are multiple
+    # trips on the same day; a unique index is required for seaborn
+    # plotting and for reliable row lookups below.
+    df = df.reset_index()
+
+    if size_by_mileage:
+        s = 1
+        ms = 5
+    else:
+        s = 30
+        ms = 1
     mean = df['minutes_to_' + end].mean()
     sigma = df['minutes_to_' + end].std()
     three_sigma = 3 * df['minutes_to_' + end].std()
@@ -202,7 +214,13 @@ def duration_vs_departure(filename, df, start='home', end='work', gbr=False,
     upper_mask = df['minutes_to_' + end] >= mean + plot_split
 
     # Determine if we need split plots based on dataset size
-    use_split_plot = len(df) > 20
+    # use_split_plot = len(df) > 20
+
+    # Determine if we need split plots
+    # based on whether the max value exceeds 3 sigma
+    use_split_plot = False
+    if df['minutes_to_' + end].max() > mean + three_sigma:
+        use_split_plot = True
 
     if use_split_plot:
         # Create two subplots, stacked vertically, sharing x-axis
@@ -221,12 +239,12 @@ def duration_vs_departure(filename, df, start='home', end='work', gbr=False,
     # Initialize the visualization
     sns.scatterplot(data=df[lower_mask], x=start + '_departure_time_hr',
                     y='minutes_to_' + end, hue='day_of_week',
-                    hue_order=['Mon', 'Tue', 'Wed', 'Thu', 'Fri'], s=1,
+                    hue_order=['Mon', 'Tue', 'Wed', 'Thu', 'Fri'], s=s,
                     ax=ax_lower)
     if use_split_plot:
         sns.scatterplot(data=df[upper_mask], x=start + '_departure_time_hr',
                         y='minutes_to_' + end, hue='day_of_week',
-                        hue_order=['Mon', 'Tue', 'Wed', 'Thu', 'Fri'], s=1,
+                        hue_order=['Mon', 'Tue', 'Wed', 'Thu', 'Fri'], s=s,
                         ax=ax_upper, legend=False)
 
         # Hide the spines between ax_lower and ax_upper
@@ -248,10 +266,16 @@ def duration_vs_departure(filename, df, start='home', end='work', gbr=False,
     handles, labels = ax_lower.get_legend_handles_labels()
 
     # Highlight the most recent trip by putting a yellow halo around it
-    df_subset = df[[start + '_departure_time_hr', 'minutes_to_' + end]]
+    # Track rows by position since duplicate index labels can occur
+    # (e.g., two trips on the same date).
+    row_id_col = '_row_id'
+    df = df.assign(**{row_id_col: np.arange(len(df))})
+    df_subset = df[[row_id_col, start + '_departure_time_hr',
+                    'minutes_to_' + end]]
     df_subset = df_subset.dropna()
-    x_latest = df_subset[start + '_departure_time_hr'][df_subset.index[-1]]
-    y_latest = df_subset['minutes_to_' + end][df_subset.index[-1]]
+    x_latest = df_subset[start + '_departure_time_hr'].iloc[-1]
+    y_latest = df_subset['minutes_to_' + end].iloc[-1]
+    latest_row_id = df_subset[row_id_col].iloc[-1]
 
     if use_split_plot:
         if y_latest < mean + plot_split:
@@ -277,7 +301,9 @@ def duration_vs_departure(filename, df, start='home', end='work', gbr=False,
     print("Most Recent Trip Stats:")
     z = (y_latest - mean) / sigma if sigma else 0
     print(f"Z-score of the most recent trip: {z:.2f}")
-    mileage = df['mileage_to_' + end][df_subset.index[-1]]
+    mileage = df.loc[
+        df[row_id_col] == latest_row_id, 'mileage_to_' + end
+    ].iloc[0]
     print(f"Mileage of the most recent trip: {mileage:.0f} miles")
 
     # Print percentile of most recent trip compared to similar departure times
@@ -320,7 +346,10 @@ def duration_vs_departure(filename, df, start='home', end='work', gbr=False,
     if comment_col in df.columns:
         df_sorted[comment_col] = df_sorted[comment_col].fillna('')
     # Print rank of latest trip
-    latest_rank = df_sorted.index.get_loc(df_subset.index[-1]) + 1
+    df_sorted = df_sorted.reset_index(drop=True)
+    latest_rank = df_sorted.index[
+        df_sorted[row_id_col] == latest_row_id
+    ][0] + 1
     latest_rank_text = f"{latest_rank}"
     # Handle ordinal suffixes (1st, 2nd, 3rd, 4th, etc.)
     # Special cases: 11th, 12th, 13th
@@ -338,16 +367,16 @@ def duration_vs_departure(filename, df, start='home', end='work', gbr=False,
           f"{len(df_sorted)} trips based on minutes to {end}.")
     bottom_10_df = df_sorted.head(10)
     top_10_df = df_sorted.tail(10)
-    cols = ['minutes_to_' + end, 'day_of_week',
+    cols = ['date', 'minutes_to_' + end, 'day_of_week',
             start + '_departure_time_hmm', comment_col]
     if y_latest in bottom_10_df['minutes_to_' + end].values:
         print(f"The most recent trip is among the 10 fastest from "
               f"{start} to {end}:")
-        print(bottom_10_df[cols])
+        print(bottom_10_df[cols].set_index('date'))
     elif y_latest in top_10_df['minutes_to_' + end].values:
         print(f"The most recent trip is among the 10 slowest from "
               f"{start} to {end}:")
-        print(top_10_df[cols])
+        print(top_10_df[cols].set_index('date'))
 
     # Add horizontal line at mean
     ax_lower.axhline(mean, color='c', linestyle='dotted', label='Mean')
@@ -425,21 +454,36 @@ def duration_vs_departure(filename, df, start='home', end='work', gbr=False,
 
     # Add size of scatter points by mileage but don't add mileage to the legend
     # to plot the scatter points colored by day of the week
-    ax_lower = sns.scatterplot(data=df[lower_mask],
-                               x=start + '_departure_time_hr',
-                               y='minutes_to_' + end, hue='day_of_week',
-                               hue_order=['Mon', 'Tue', 'Wed', 'Thu',
-                                          'Fri'],
-                               size='mileage_to_' + end, legend=False,
-                               ax=ax_lower)
-    if use_split_plot:
-        ax_upper = sns.scatterplot(data=df[upper_mask],
+    if size_by_mileage:
+        ax_lower = sns.scatterplot(data=df[lower_mask],
                                    x=start + '_departure_time_hr',
                                    y='minutes_to_' + end, hue='day_of_week',
                                    hue_order=['Mon', 'Tue', 'Wed', 'Thu',
                                               'Fri'],
                                    size='mileage_to_' + end, legend=False,
-                                   ax=ax_upper)
+                                   ax=ax_lower)
+        if use_split_plot:
+            ax_upper = sns.scatterplot(data=df[upper_mask],
+                                       x=start + '_departure_time_hr',
+                                       y='minutes_to_' + end,
+                                       hue='day_of_week',
+                                       hue_order=['Mon', 'Tue', 'Wed', 'Thu',
+                                                  'Fri'],
+                                       size='mileage_to_' + end, legend=False,
+                                       ax=ax_upper)
+    else:
+        ax_lower = sns.scatterplot(data=df[lower_mask],
+                                   x=start + '_departure_time_hr',
+                                   y='minutes_to_' + end, hue='day_of_week',
+                                   hue_order=['Mon', 'Tue', 'Wed', 'Thu',
+                                              'Fri'], s=s, ax=ax_lower)
+        if use_split_plot:
+            ax_upper = sns.scatterplot(data=df[upper_mask],
+                                       x=start + '_departure_time_hr',
+                                       y='minutes_to_' + end,
+                                       hue='day_of_week',
+                                       hue_order=['Mon', 'Tue', 'Wed', 'Thu',
+                                                  'Fri'], s=s, ax=ax_upper)
     ax_lower = time_xticks(ax_lower, df[start + '_departure_time_hr'].min(),
                            df[start + '_departure_time_hr'].max())
     if use_split_plot:
@@ -561,7 +605,7 @@ def duration_vs_departure(filename, df, start='home', end='work', gbr=False,
         #     if use_split_plot:
         #         ax_upper.plot(x_smooth, y_smooth, c=c, label='Smoothed line')
 
-    plt.legend(handles=handles, labels=labels, markerscale=5,
+    plt.legend(handles=handles, labels=labels, markerscale=ms,
                bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0.)
 
     # Specfiy axis labels
@@ -624,6 +668,9 @@ def duration_vs_departure(filename, df, start='home', end='work', gbr=False,
 def minutes_violin(plots_folder, start, end, df):
     """Violin plots for minutes and departure time,
     both as a whole and by day of week"""
+    # seaborn requires a unique index; df is indexed by date, which
+    # can repeat when there are multiple trips on the same day.
+    df = df.reset_index(drop=True)
     sns.violinplot(data=df, x='minutes_to_' + end)
     plt.savefig(f'{plots_folder}/minutes_from_{start}_to_{end}_violinplot')
     plt.clf()
@@ -645,6 +692,9 @@ def minutes_violin(plots_folder, start, end, df):
 
 def minutes_histogram(plots_folder, start, end, df):
     """Histogram of minutes to work, both as a whole and by day of week"""
+    # seaborn requires a unique index; df is indexed by date, which
+    # can repeat when there are multiple trips on the same day.
+    df = df.reset_index(drop=True)
     minutes_col = 'minutes_to_' + end
     valid_minutes = df[minutes_col].dropna()
 
@@ -714,6 +764,11 @@ def driving_and_waiting_vs_departure(filename, df, start='home',
     if end == 'home':
         launch_port = 'fauntleroy'
         land_port = 'southworth'
+
+    # df is indexed by date, which can repeat when there are multiple
+    # trips on the same day; a unique index is required for seaborn
+    # plotting and for reliable row lookups below.
+    df = df.reset_index()
 
     first_leg = (df['park_in_line_' + launch_port] -
                  df[start + '_departure_time']).dt.total_seconds()/60
@@ -909,7 +964,7 @@ def departure_times_over_time(plots_folder, start, end, df):
         df[start + '_departure_time_hr'].rolling(window=30, min_periods=1)
         .mean()
     )
-    ax.plot(df.index, df['smoothed_departure_time'],
+    ax.plot(df['date'], df['smoothed_departure_time'],
             color='black', label='30-Day Rolling Average')
     plt.legend()
 
@@ -945,7 +1000,7 @@ def arrival_times_over_time(plots_folder, start, end, df,
         df[end + '_arrival_time_hr'].rolling(window=30, min_periods=1)
         .mean()
     )
-    ax.plot(df.index, df['smoothed_arrival_time'],
+    ax.plot(df['date'], df['smoothed_arrival_time'],
             color='black', label='30-Day Rolling Average')
     plt.legend()
 
@@ -999,11 +1054,14 @@ def arrival_times_over_time(plots_folder, start, end, df,
 
 
 def mileage_histogram(plots_folder, start, end, df):
+    # seaborn requires a unique index; df is indexed by date, which
+    # can repeat when there are multiple trips on the same day.
+    df = df.reset_index(drop=True)
     min_mileage = df['mileage_to_' + end].min()
     max_mileage = df['mileage_to_' + end].max()
     bins = np.arange(min_mileage - 0.5, max_mileage + 1.5, 1)
     ax = sns.histplot(data=df, x='mileage_to_' + end, bins=bins)
-    ax.set_yscale('log')
+    # ax.set_yscale('log')
     # plt.xlim(min_mileage - 1, max_mileage + 1)
     for p in ax.patches:
         height = p.get_height()

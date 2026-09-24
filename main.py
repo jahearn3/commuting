@@ -1,17 +1,26 @@
 import data_processing as dp
 import make_plots as mp
 
-trips = ['tenino', 'port_orchard_driving', 'port_orchard_ferry', 'bellevue']
+trips = [
+    'tenino',
+    'port_orchard_driving',
+    'port_orchard_ferry',
+    'bellevue',
+    'springfield'
+    ]
 for trip in trips:
-    if trip in ['tenino', 'port_orchard_ferry', 'bellevue']:
+    if trip in ['tenino',
+                'port_orchard_driving',
+                'port_orchard_ferry',
+                'bellevue']:
         continue
 
-    gbr = True if trip != 'bellevue' else False
-    dtr = True if trip != 'bellevue' else False
-    rfr = True if trip != 'bellevue' else False
+    gbr = True if trip not in ['bellevue', 'springfield'] else False
+    dtr = True if trip not in ['bellevue', 'springfield'] else False
+    rfr = True if trip not in ['bellevue', 'springfield'] else False
     nn = False
-    xgb = True if trip != 'bellevue' else False
-    ensemble_r = True if trip != 'bellevue' else False
+    xgb = True if trip not in ['bellevue', 'springfield'] else False
+    ensemble_r = True if trip not in ['bellevue', 'springfield'] else False
 
     filename = f'commuting_{trip}.csv'
     df = dp.process_data(filename)
