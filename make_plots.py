@@ -901,7 +901,8 @@ def predictions_by_month(plots_folder, reg, df, start, end):
     # drop rows where start + '_departure_time_hr' is NaN
     df_notna = df_ss.dropna()
 
-    counts = df_notna['month'].value_counts().sort_index().to_list()
+    counts = (df_notna['month'].value_counts().sort_index()
+              .reindex(range(1, 13), fill_value=0).to_list())
     Y = []
     monthly_avg = []
     for i in range(1, 13):
@@ -947,6 +948,12 @@ def predictions_by_month(plots_folder, reg, df, start, end):
 
 
 def departure_times_over_time(plots_folder, start, end, df):
+    # If there are multiple entries for the same date, keep the right one
+    if start == 'home':
+        df = df.drop_duplicates(subset='date', keep='first').copy()
+    else:
+        df = df.drop_duplicates(subset='date', keep='last').copy()
+
     # Apply the default theme
     sns.set_theme()
 
@@ -983,6 +990,12 @@ def departure_times_over_time(plots_folder, start, end, df):
 
 def arrival_times_over_time(plots_folder, start, end, df,
                             departure_targets=False):
+    # If there are multiple entries for the same date, keep the right one
+    if start == 'home':
+        df = df.drop_duplicates(subset='date', keep='first').copy()
+    else:
+        df = df.drop_duplicates(subset='date', keep='last').copy()
+
     # Apply the default theme
     sns.set_theme()
 

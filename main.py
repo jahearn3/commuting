@@ -15,12 +15,12 @@ for trip in trips:
                 'bellevue']:
         continue
 
-    gbr = True if trip not in ['bellevue', 'springfield'] else False
-    dtr = True if trip not in ['bellevue', 'springfield'] else False
-    rfr = True if trip not in ['bellevue', 'springfield'] else False
+    gbr = True if trip not in ['bellevue'] else False
+    dtr = True if trip not in ['bellevue'] else False
+    rfr = True if trip not in ['bellevue'] else False
     nn = False
-    xgb = True if trip not in ['bellevue', 'springfield'] else False
-    ensemble_r = True if trip not in ['bellevue', 'springfield'] else False
+    xgb = True if trip not in ['bellevue'] else False
+    ensemble_r = True if trip not in ['bellevue'] else False
 
     filename = f'commuting_{trip}.csv'
     df = dp.process_data(filename)
